@@ -1,6 +1,6 @@
 <table><tr><td align="left">
 <pre>
-
+  
                       .cc:;;,.                   ..
                      :xcdxxxxd.              .,lxc
                     :xxxcoxxxxx.           .oxxxl
@@ -16,8 +16,6 @@
           cxxxo,                  'xxxl
          cd:'                      .xc
          .                          .
-
-
 </pre>
 </td></tr></table>
 # Nexus patcher
