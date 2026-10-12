@@ -1,3 +1,24 @@
+```
+
+                                                   l,kkkxxk                     oo
+                                                  xxd;xxxxxo.               lddxd
+                                                 dxxxd:xxxxxd.            .xxxxx
+                                                xxxxx' .xxxxxd.          .xxxxx
+                                               xxxxx,   .xxxxxx.        .xxxxx
+                                              dxxxx.      xxxxxx'      .kxxxd
+                                             kxxxx.        dxxxxx.    .kxxxx
+                                            kxxxx'          xxxxxd'  .xxxxx
+                                           xxxxx,            xxxxxx;.kxxxx
+                                          kxxxx,              xxxxx:kxxxx
+                                         dxxxx'                oxx,kxxxx
+                                        xxxxx'                  o,kxxxx
+                                       xxxxx.                   'kxxxd
+                                      xxxxx.                     xxxx
+                                     xx,                          ox
+
+
+```
+
 # Nexus patcher
 
 Re-skins GameGuardian as **Nexus** on any apktool-decoded GG tree: navbar and
