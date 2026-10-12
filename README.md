@@ -115,17 +115,9 @@ resources/res/        static drawables, values, icons
 tests/                pytest suite + fixtures
   make_fixture.py     regenerates the mini r.smali fixture from live anchors
 build.sh              apktool b -> zipalign -> apksigner -> verify
-legacy/patch.py       the original single-file implementation, kept for diffing
 ```
 
 Importing `nexus.*` is side-effect free, so the tests need no tree on disk.
-
-### `legacy/patch.py`
-
-The original 2384-line `patch.py` is preserved there as a reference
-implementation. It is not on any code path. If a refactor ever changes
-behaviour, diffing the two renderers against a real tree is the quickest way to
-find it.
 
 ---
 
@@ -151,9 +143,8 @@ interpreter separate from `/usr/bin/python3`:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `NEXUS_APKTOOL` | known-good apktool 2.8.1 | apktool jar |
-| `NEXUS_AAPT` | `/usr/bin/aapt2` | aapt2 binary |
-| `NEXUS_ICON` | `.../nexus/icon.png` | launcher/floating icon source PNG |
+| `NEXUS_APKTOOL` | `apktool` on `PATH` | apktool jar, or a full path to one |
+| `NEXUS_AAPT` | `aapt2` on `PATH` | aapt2 binary |
 | `NEXUS_KEYSTORE` | `~/.android/debug.keystore` | signing key |
 | `NEXUS_KEYALIAS` | `androiddebugkey` | signing alias |
 | `NEXUS_KEYPASS` | `android` | signing password |

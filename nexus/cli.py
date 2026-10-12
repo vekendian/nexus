@@ -19,9 +19,9 @@ from .layout import transform_main
 from .manifest import NEW_VERSION_NAME, rebrand, unrebrand
 from .smali import (DOWNLOAD_URL_NEW, DOWNLOAD_URL_OLD, KBD_LAYOUT_ANCHOR,
                     KBD_LAYOUT_NEW, KBD_SELECTOR_NEW, transform_smali)
-from .tree import (APKTOOL, AAPT, BACKUP_DIR, LOCK_PATH, RES_DIR, backup,
-                   copy_resources, detect_version, ensure_apktool_yml,
-                   resolve_tree, restore_backup, write, read)
+from .tree import (BACKUP_DIR, LOCK_PATH, RES_DIR, backup, copy_resources,
+                   detect_version, ensure_apktool_yml, read, resolve_tree,
+                   restore_backup, write)
 
 TRACK = "smali/android/ext/r.smali"
 
@@ -34,11 +34,9 @@ def _load_ids(tree: Path) -> Ids:
 
 
 def _stages() -> str:
-    return (f"  java -jar {APKTOOL} b -f --aapt {AAPT} <tree> -o nexus_patched.apk\n"
-            "  zipalign -f 4 nexus_patched.apk nexus_aligned.apk\n"
-            "  apksigner sign --ks ~/.android/debug.keystore --ks-key-alias "
-            "androiddebugkey --ks-pass pass:android nexus_aligned.apk\n"
-            "  (or just: ./build.sh --tree <tree>)")
+    return ("Build:\n"
+            "  bash build.sh --src <tree> --out nexus-1.0.0.apk\n"
+            "  (run it with `bash` — Android shared storage cannot set the exec bit)")
 
 
 def transform_public(public: str, ids: Ids) -> str:

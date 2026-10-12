@@ -14,11 +14,10 @@ RES_DIR = PATCHER_DIR / "resources"
 LOCK_PATH = PATCHER_DIR / "nexus_ids.json"
 BACKUP_DIR = ".nexus_backup"
 
-# Overridable so the patcher is not welded to one device's paths.
-ICON_SRC = Path(os.environ.get("NEXUS_ICON", "/storage/emulated/0/#Vekendian/nexus/icon.png"))
-APKTOOL = os.environ.get("NEXUS_APKTOOL",
-                         "/storage/emulated/0/#Vekendian/old_nexus_for_ref/patcher/tools/apktool-2.8.1.jar")
-AAPT = os.environ.get("NEXUS_AAPT", "/usr/bin/aapt2")
+# Overridable so the tool is not welded to one machine's paths. apktool defaults
+# to whatever is on PATH; set NEXUS_APKTOOL=<jar> to pin a specific build.
+APKTOOL = os.environ.get("NEXUS_APKTOOL", "apktool")
+AAPT = os.environ.get("NEXUS_AAPT", "aapt2")
 
 # Files this patcher rewrites. revert() restores exactly this set, then removes
 # the resources it copied. Anything outside this list is untouched.

@@ -18,6 +18,5 @@ from nexus.cli import main  # noqa: E402
 
 if __name__ == "__main__":
     print("note: patch.py is a shim; the implementation is now the nexus package. "
-          "Use nexus.py directly. The original single-file version is kept at "
-          "legacy/patch.py for reference.", file=sys.stderr)
+          "Use nexus.py directly.", file=sys.stderr)
     sys.exit(main())

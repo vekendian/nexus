@@ -6,14 +6,11 @@
     nexus.py revert --src <tree>    restore from the backup
     nexus.py ids    --src <tree>    show the ID lock file and audit it
 
-Run `./build.sh --src <tree>` afterwards to produce a signed APK.
+Run `bash build.sh --src <tree>` afterwards to produce a signed APK.
 
 Note: this file and the `nexus/` package share a name in the same directory.
 That is fine — running `python3 nexus.py` executes this file as __main__, so
 `import nexus` still resolves to the package and nothing recurses.
-
-The original single-file implementation is kept at legacy/patch.py as a
-reference for diffing.
 """
 
 import sys

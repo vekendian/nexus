@@ -420,7 +420,7 @@ def transform_main(main: str, version: str) -> str:
     end += len("        </android.fix.ScrollView>")
     main = main[:start] + _scroll_view_block(version) + main[end:]
     if main.count(ROW_OPEN) != 2:
-        raise PatchError(f"legacy rows anchor found {main.count(ROW_OPEN)}x mid-apply")
+        raise PatchError(f"button rows anchor found {main.count(ROW_OPEN)}x mid-apply")
     main = main.replace(ROW_OPEN, ROW_OPEN_NEW)
     main = replace_once(main, START_ANCHOR,
                         START_ANCHOR.replace(

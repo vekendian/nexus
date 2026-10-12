@@ -32,7 +32,7 @@ def replace_once(text: str, old: str, new: str, what: str) -> str:
 def replace_exact(text: str, old: str, new: str, what: str, count: int) -> str:
     """Replace every occurrence, asserting the count matches `count`.
 
-    Used for anchors that legitimately repeat (e.g. two legacy button rows).
+    Used for anchors that legitimately repeat (e.g. two pre-existing button rows).
     """
     n = text.count(old)
     if n != count:

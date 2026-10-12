@@ -24,7 +24,7 @@ from .smali import (ARRAY_ANCHOR, COUNT_ANCHOR, COUNT_NEW,
                     ON_PAUSE_NEW, POSTRESUME_ANCHOR, POSTRESUME_NEW, POWER_METHODS_ANCHOR,
                     REGISTERS_ANCHOR, REGISTERS_NEW, RESUME_ANCHOR, RESUME_NEW,
                     SWITCH_ANCHOR, Z_ANCHOR, Z_NEW)
-from .tree import ICON_SRC, RES_DIR, icon_resource_files, read, smali_roots
+from .tree import RES_DIR, icon_resource_files, read, smali_roots
 
 MARKER = "nexus_tab_home"  # smali const added by the patch => idempotency
 
@@ -105,7 +105,7 @@ def preflight(tree: Path, ids: Ids) -> list:
 
     for what, blob, cnt in [
         ("front_text block", FRONT_TEXT_BLOCK, 1),
-        ("legacy button rows (visibility targets)", ROW_OPEN, 2),
+        ("button rows (visibility targets)", ROW_OPEN, 2),
         ("ScrollView open", "        <android.fix.ScrollView", 1),
         ("ScrollView close", "        </android.fix.ScrollView>", 1),
         ("start-button/navbar insert point", START_ANCHOR, 1),
@@ -132,10 +132,6 @@ def preflight(tree: Path, ids: Ids) -> list:
     for rel in icon_resource_files():
         if not (RES_DIR / rel).is_file():
             errors.append(f"icon override missing: {RES_DIR / rel}")
-    if not ICON_SRC.is_file():
-        errors.append(f"icon source missing: {ICON_SRC}")
-    elif ICON_SRC.read_bytes()[:8] != b"\x89PNG\r\n\x1a\n":
-        errors.append(f"icon source is not a PNG: {ICON_SRC}")
 
     # rebrand anchors
     if not (tree / "smali" / "com" / "scmq").is_dir():
@@ -207,7 +203,7 @@ def postflight(tree: Path, ids: Ids) -> list:
     if FRONT_TEXT_GONE not in main:
         errors.append("main.xml: front_text is not hidden (visibility=gone)")
     if main.count(ROW_OPEN_NEW) != 2:
-        errors.append("main.xml: legacy button rows not hidden (visibility=gone)")
+        errors.append("main.xml: button rows not hidden (visibility=gone)")
     if MARKER not in smali:
         errors.append("r.smali: marker missing")
     if "0x7f050160" not in smali or ":sswitch_nexus_tab_home" not in smali:

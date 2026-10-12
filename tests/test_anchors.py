@@ -52,9 +52,9 @@ def test_missing_anchor_raises():
 
 def test_ambiguous_anchor_raises_and_reports_the_count():
     with pytest.raises(PatchError) as e:
-        replace_once("a b a b", "a b", "X", "legacy rows")
+        replace_once("a b a b", "a b", "X", "rows")
     assert "found 2x" in str(e.value)
-    assert "legacy rows" in str(e.value)
+    assert "rows" in str(e.value)
 
 
 def test_error_message_shows_the_anchor_body():

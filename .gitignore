@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+
+# Build output
+*.apk
+*.idsig
+*.aab
+build/
+dist/
+
+# Local patcher state (lives in a GG tree, not here, but just in case)
+.nexus_backup/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
