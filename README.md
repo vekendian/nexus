@@ -1,4 +1,5 @@
-```
+<table><tr><td align="left">
+<pre>
 
                       .cc:;;,.                   ..
                      :xcdxxxxd.              .,lxc
@@ -17,8 +18,8 @@
          .                          .
 
 
-```
-
+</pre>
+</td></tr></table>
 # Nexus patcher
 
 Re-skins GameGuardian as **Nexus** on any apktool-decoded GG tree: navbar and
