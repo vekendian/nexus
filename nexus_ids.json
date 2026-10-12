@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "gg_release": "499.2",
+  "comment": [
+    "Pinned Nexus IDs. These are deliberately fixed rather than auto-assigned so",
+    "that smali stays byte-stable across rebuilds. If a future GG release reaches",
+    "this range, preflight reports a collision and they must be bumped here.",
+    "",
+    "gg_observed is a RECORD of what GG 499.2 used for the views Nexus binds to.",
+    "It is not the source of truth: ids.gg(name) resolves by NAME from the tree's",
+    "public.xml at apply time, so a weekly GG release that renumbers works",
+    "automatically. The recorded hex only lets `ids` report drift.",
+    "",
+    "A name that DISAPPEARS is always fatal -- it means GG removed or renamed the",
+    "view Nexus depends on, and silently binding to something else would be worse",
+    "than failing."
+  ],
+  "nexus": {
+    "id": {
+      "nexus_tab_home": "0x7f050160",
+      "nexus_tab_modules": "0x7f050161",
+      "nexus_tab_settings": "0x7f050162",
+      "nexus_panel_home": "0x7f050163",
+      "nexus_panel_modules": "0x7f050164",
+      "nexus_panel_settings": "0x7f050165",
+      "nexus_power_card": "0x7f050166",
+      "nexus_row_exit": "0x7f050167",
+      "nexus_row_check": "0x7f050168",
+      "nexus_row_language": "0x7f050169",
+      "nexus_row_help": "0x7f05016a",
+      "nexus_row_fix": "0x7f05016b",
+      "nexus_lbl_home": "0x7f05016c",
+      "nexus_lbl_modules": "0x7f05016d",
+      "nexus_lbl_settings": "0x7f05016e",
+      "nexus_pill_home": "0x7f05016f",
+      "nexus_pill_modules": "0x7f050170",
+      "nexus_pill_settings": "0x7f050171",
+      "nexus_icon_home": "0x7f050172",
+      "nexus_icon_modules": "0x7f050173",
+      "nexus_icon_settings": "0x7f050174",
+      "nexus_power_title": "0x7f050175",
+      "nexus_power_sub": "0x7f050176",
+      "nexus_power_glow": "0x7f050177",
+      "nexus_power_icon": "0x7f050178",
+      "nexus_env_android": "0x7f050179",
+      "nexus_env_abi": "0x7f05017a",
+      "nexus_env_vspace": "0x7f05017b",
+      "nexus_env_root": "0x7f05017c"
+    },
+    "drawable": {
+      "nexus_bg_pill": "0x7f040070",
+      "nexus_bg_ring_on": "0x7f040071",
+      "nexus_bg_ring_off": "0x7f040072"
+    },
+    "string": {
+      "nexus_str_power_title": "0x7f09035e",
+      "nexus_str_power_sub": "0x7f09035f",
+      "nexus_str_iface_running": "0x7f090360",
+      "nexus_str_iface_stopped": "0x7f090361",
+      "nexus_str_tap_stop": "0x7f090362",
+      "nexus_str_yes": "0x7f090363",
+      "nexus_str_no": "0x7f090364"
+    }
+  },
+  "gg_observed": {
+    "btn_start_usage": "0x7f050015",
+    "btn_stop_service": "0x7f050016",
+    "check": "0x7f050025",
+    "fix_it": "0x7f050097",
+    "help": "0x7f0500a5",
+    "language": "0x7f0500c0",
+    "xa": "0x7f050158"
+  }
+}

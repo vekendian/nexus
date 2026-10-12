@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minimal public.xml fixture.
+     Carries the 15 contract ids Nexus binds to plus one decoy entry so
+     collision detection has something real to collide with. -->
+<resources>
+    <public type="id" name="root" id="0x7f040001" />
+    <public type="id" name="loader" id="0x7f040002" />
+    <public type="id" name="installer" id="0x7f040003" />
+    <public type="id" name="starter" id="0x7f040004" />
+    <public type="id" name="front_text" id="0x7f040005" />
+    <public type="id" name="btn_stop_service" id="0x7f050016" />
+    <public type="id" name="btn_start_usage" id="0x7f050015" />
+    <public type="id" name="check" id="0x7f050025" />
+    <public type="id" name="fix_it" id="0x7f050097" />
+    <public type="id" name="language" id="0x7f0500c0" />
+    <public type="id" name="help" id="0x7f0500a5" />
+    <public type="id" name="installing" id="0x7f040006" />
+    <public type="id" name="progress_bar" id="0x7f040007" />
+    <public type="id" name="progress_bar_text" id="0x7f040008" />
+    <public type="id" name="abort_button" id="0x7f040009" />
+    <public type="id" name="xa" id="0x7f050158" />
+    <public type="string" name="app_name" id="0x7f030000" />
+    <public type="drawable" name="icon" id="0x7f020000" />
+</resources>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Replaces GameGuardian's btn_keyboard_key_lxx_dark StateListDrawable, which
+     fans out to six 9-patch PNGs per density. Four states, no image assets.
+     Note: key_text_color_lxx_dark is unreferenced anywhere in smali, and the
+     keyBackground/keyTextColor attrs in keyboard.xml are ignored because
+     InternalKeyboard never reads a TypedArray — neither is restyled here.
+
+     state_activated and state_focused are deliberately omitted: InternalKeyboard
+     is focusable="true", so a key that keeps focus would otherwise sit permanently
+     painted in the pressed colour. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true" android:drawable="@drawable/nexus_kbd_key_pressed" />
+    <item android:drawable="@drawable/nexus_kbd_key_normal" />
+</selector>

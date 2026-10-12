@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nexus-owned UI strings.
+
+  GameGuardian ships no translations for any of these (verified: no `modules`,
+  `settings`, `system`, `environment`, `android` or `interface` string exists in
+  its table), so today they resolve to the English values below. Keeping them as
+  proper string resources means adding a language later is one file per locale
+  instead of editing smali.
+
+  Strings that SMALI sets via Context.getString() additionally need a pinned id
+  in public.xml — see NEW_STRING_IDS in patch.py.
+-->
+<resources>
+    <string name="nexus_str_header_nexus">NEXUS</string>
+    <string name="nexus_str_header_env">ENVIRONMENT</string>
+    <string name="nexus_str_header_modules">MODULES</string>
+    <string name="nexus_str_header_settings">SETTINGS</string>
+    <string name="nexus_str_no_modules">No modules</string>
+
+    <string name="nexus_str_tab_home">Home</string>
+    <string name="nexus_str_tab_modules">Modules</string>
+    <string name="nexus_str_tab_settings">Settings</string>
+
+    <string name="nexus_str_env_android">ANDROID</string>
+    <string name="nexus_str_env_abi">ABI</string>
+    <string name="nexus_str_env_vspace">VSPACE</string>
+    <string name="nexus_str_env_root">ROOT</string>
+
+    <!-- The seven below are pinned to explicit ids in public.xml (NEW_STRING_IDS)
+         because SMALI reads them via Context.getString(). -->
+    <string name="nexus_str_power_title">Start interface</string>
+    <string name="nexus_str_power_sub">Tap to start</string>
+    <string name="nexus_str_iface_running">Interface running</string>
+    <string name="nexus_str_iface_stopped">Interface stopped</string>
+    <string name="nexus_str_tap_stop">Tap to stop</string>
+    <string name="nexus_str_yes">Yes</string>
+    <string name="nexus_str_no">No</string>
+</resources>

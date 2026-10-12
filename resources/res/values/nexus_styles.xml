@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nexus dialog theme.
+
+  FixTheme sets android:alertDialogTheme + android:dialogTheme to @style/NexusDialog.
+  FixTheme is declared on <application> in the manifest, so this applies to every
+  dialog the app shows — including ones built from the service context — without
+  touching any of the ~300 AlertDialog.Builder call sites.
+
+  Caveat: some GameGuardian dialogs inflate their own layouts, which carry their
+  own text colours. Those sit on the new dark surface as-is; verified on device.
+-->
+<resources>
+    <style name="NexusDialogButton" parent="@android:style/Widget.Material.Button.Borderless.Colored">
+        <item name="android:textColor">@color/nexus_orange</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minWidth">64dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- android.fix.Button extends android.widget.Button with a passthrough
+         constructor, so it resolves styling from the theme's android:buttonStyle
+         rather than a TypedArray. Setting that attr on NexusDialog is what
+         restyles every button sitting inside dialog content. -->
+    <style name="NexusDialogContentButton" parent="@android:style/Widget.Material.Button">
+        <item name="android:background">@drawable/nexus_bg_button</item>
+        <!-- Widget.Material.Button tints whatever background it is handed via
+             backgroundTint, which washes nexus_bg_button back out to a light
+             stock grey. Clear the tint so the custom drawable survives. -->
+        <item name="android:backgroundTint">@android:color/transparent</item>
+        <item name="android:textColor">@color/nexus_orange</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <style name="NexusDialog" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/nexus_bg_dialog</item>
+        <item name="android:textColorPrimary">@color/nexus_text</item>
+        <item name="android:textColorSecondary">@color/nexus_text2</item>
+        <item name="android:textColorAlertDialogListItem">@color/nexus_text</item>
+        <item name="android:colorAccent">@color/nexus_orange</item>
+        <item name="android:backgroundDimAmount">0.7</item>
+        <item name="android:buttonStyle">@style/NexusDialogContentButton</item>
+        <item name="android:buttonBarPositiveButtonStyle">@style/NexusDialogButton</item>
+        <item name="android:buttonBarNegativeButtonStyle">@style/NexusDialogButton</item>
+        <item name="android:buttonBarNeutralButtonStyle">@style/NexusDialogButton</item>
+    </style>
+</resources>

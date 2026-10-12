@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Default (unpressed) keyboard key. Square, no corners: rounded keys look
+     wrong against the rounded keyboard panel on this case. Deliberately a
+     different shade from nexus_kbd_key_pressed so a press is always visible. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/nexus_surface_alt" />
+</shape>
