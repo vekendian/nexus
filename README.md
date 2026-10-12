@@ -1,3 +1,6 @@
+# Nexus patcher
+
+<div align="center">
 <table><tr><td align="left">
 <pre>
   
@@ -18,7 +21,7 @@
          .                          .
 </pre>
 </td></tr></table>
-# Nexus patcher
+</div>
 
 Re-skins GameGuardian as **Nexus** on any apktool-decoded GG tree: navbar and
 card panels, a power card, an ENVIRONMENT readout, localised settings rows, a
