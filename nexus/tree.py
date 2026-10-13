@@ -94,8 +94,25 @@ def detect_version(tree: Path) -> str:
     return "unknown"
 
 
-def copy_resources(tree: Path) -> None:
+def copy_resources(tree: Path) -> list:
+    """Copy Nexus' res/ and smali/ payload into the tree.
+
+    resources/res is the ordinary res overlay. resources/smali holds whole
+    hand-written smali classes (currently only the module card's click
+    listener) that have no XML form; they are copied into the smali roots
+    verbatim so baksmali/apktool assembles them like any other class.
+    """
+    copied = []
     shutil.copytree(RES_DIR / "res", tree / "res", dirs_exist_ok=True)
+    smali_src = RES_DIR / "smali"
+    if smali_src.is_dir():
+        # Only the primary root. GG is single-dex, but copying the same class
+        # into every root would be a duplicate-definition build error the moment
+        # GG ships more than one.
+        dest = tree / "smali"
+        shutil.copytree(smali_src, dest, dirs_exist_ok=True)
+        copied.append("smali")
+    return copied
 
 
 def default_output(tree: Path) -> Path:

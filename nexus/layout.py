@@ -7,6 +7,8 @@ instead of being frozen in as hex literals.
 
 from __future__ import annotations
 
+import re
+
 from .anchors import PatchError, find_span, replace_exact, replace_once
 
 FRONT_TEXT_BLOCK = '''\
@@ -241,20 +243,40 @@ PANEL_MODULES = '''\
                         android:textSize="12.0sp"
                         android:textStyle="bold" />
                     <android.fix.LinearLayout
+                        android:id="@+id/nexus_modules_list"
                         android:layout_width="fill_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/nexus_bg_card_sm"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="24.0dip">
+                        android:orientation="vertical">
                         <android.fix.TextView
-                            android:layout_width="wrap_content"
+                            android:id="@+id/nexus_modules_empty"
+                            android:layout_width="fill_parent"
                             android:layout_height="wrap_content"
+                            android:background="@drawable/nexus_bg_card_sm"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="24.0dip"
                             android:text="@string/nexus_str_no_modules"
                             android:textColor="@color/nexus_text2"
                             android:textSize="13.0sp" />
                     </android.fix.LinearLayout>
                 </android.fix.LinearLayout>'''
+
+# Floating add button. Lives outside the ScrollView (below) so it does not scroll
+# with the panel list; visibility follows the active tab via nexusApplyTab().
+MODULES_FAB = '''\
+        <android.fix.ImageView
+            android:id="@+id/nexus_modules_add"
+            android:layout_width="56.0dip"
+            android:layout_height="56.0dip"
+            android:layout_gravity="bottom|end"
+            android:layout_marginRight="20.0dip"
+            android:layout_marginBottom="16.0dip"
+            android:background="@drawable/nexus_bg_fab"
+            android:clickable="true"
+            android:contentDescription="@string/nexus_str_modules_add"
+            android:focusable="true"
+            android:src="@drawable/nexus_ic_plus"
+            android:visibility="gone" />'''
 
 # Labels reuse GameGuardian's own string resources so they inherit the 54
 # shipped locales for free. Note @string/check renders "Verification" in
@@ -380,11 +402,32 @@ NAVBAR = '''\
 ]) + "\n        </android.fix.LinearLayout>"
 
 
+def _overlay_open() -> str:
+    """Open the FrameLayout the navbar and the add button share.
+
+    Opened immediately before the ScrollView (see _scroll_view_block) and
+    closed after the navbar in transform_main, so the two become siblings
+    inside a FrameLayout instead of siblings in GG's vertical LinearLayout.
+    """
+    return '''\
+        <android.fix.FrameLayout
+            android:id="@+id/nexus_overlay"
+            android:layout_width="fill_parent"
+            android:layout_height="0.0dip"
+            android:layout_weight="1.0">
+            <android.fix.LinearLayout
+                android:id="@+id/nexus_shell"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:orientation="vertical">
+'''
+
+
 def _scroll_view_block(version: str) -> str:
     front = FRONT_TEXT_GONE
     home = PANEL_HOME.replace("{version}", version)
     return f'''\
-        <android.fix.ScrollView
+{_overlay_open()}        <android.fix.ScrollView
             android:layout_width="fill_parent"
             android:layout_height="0.0dip"
             android:layout_weight="1.0">
@@ -426,9 +469,64 @@ def transform_main(main: str, version: str) -> str:
     main = main[:start] + _scroll_view_block(version) + main[end:]
     main = replace_exact(main, ROW_OPEN, ROW_OPEN_NEW,
                          "button rows", count=2)
+    # The ScrollView and the navbar are siblings inside GG's `starter`
+    # LinearLayout, so neither can overlap the other. Wrapping both in a
+    # FrameLayout gives the add button a layer to float in, pinned
+    # bottom|end just above the navbar. The inner LinearLayout keeps the
+    # original vertical flow; the ScrollView loses layout_weight because the
+    # wrapper is now what shares the parent's height.
     main = replace_once(main, START_ANCHOR,
                         START_ANCHOR.replace(
                             "</android.fix.LinearLayout>\n    </android.fix.LinearLayout>",
-                            f"</android.fix.LinearLayout>\n{NAVBAR}\n    </android.fix.LinearLayout>"),
+                            "</android.fix.LinearLayout>\n"
+                            f"{NAVBAR}\n"
+                            f"            </android.fix.LinearLayout>\n"
+                            f"{MODULES_FAB}\n"
+                            f"    </android.fix.FrameLayout>\n"
+                            f"    </android.fix.LinearLayout>"),
                         "navbar insert")
     return main
+
+
+# ---------------------------------------------------------- service_config ---
+
+# GG's settings screen hardcodes its section-header band as an opaque purple in
+# five places, one per Separator. There is no other purple in res/, so this is
+# the whole recolour job for this screen.
+SERVICE_SEPARATOR_BG = 'android:background="#ff422654"'
+SERVICE_SEPARATOR_NEW = 'android:background="@color/nexus_orange"'
+SERVICE_SEPARATOR_COUNT = 5
+
+# Painted onto the same five rows. GG's Separator style is #AAAAAA grey, which
+# sits at 1.12:1 against Nexus orange — unreadable — so each band carries its own
+# dark text colour (nexus_on_orange, 6.65:1). Set per-row rather than by editing
+# the shared Separator style, because that style is GG's and other screens use it.
+SERVICE_SEPARATOR_TEXT = 'android:textAppearance="@style/Separator"'
+SERVICE_SEPARATOR_TEXT_NEW = ('android:textAppearance="@style/Separator" '
+                              'android:textColor="@color/nexus_on_orange"')
+
+# The donate row is a self-closing TextView. Matched element-wise rather than by
+# a literal string so it works for both the inline and pretty-printed decodes.
+DONATE_ROW_RE = re.compile(
+    r'^[ \t]*<android\.fix\.TextView\b[^>]*\bandroid:id="@id/donate"[^>]*/>[ \t]*\r?\n?',
+    re.M)
+
+
+def transform_service_config(xml: str) -> str:
+    """Recolour the settings screen and drop the donate row.
+
+    Removing the view is sufficient to hide the button: `donate` (0x7f050074) is
+    referenced exactly once in all of smali, as a case in ConfigListAdapter's
+    sparse-switch that maps a clicked row to an icon. With no view to click, the
+    case is unreachable, and no code calls findViewById on it, so there is no
+    null-deref risk. The dead case is left in place on purpose: editing the
+    switch table would add risk for no visual gain.
+    """
+    xml, n = DONATE_ROW_RE.subn("", xml)
+    if n != 1:
+        raise PatchError(f"service_config: donate row found {n}x (expected 1x)")
+    xml = replace_exact(xml, SERVICE_SEPARATOR_BG, SERVICE_SEPARATOR_NEW,
+                        "service_config separator bands", count=SERVICE_SEPARATOR_COUNT)
+    xml = replace_exact(xml, SERVICE_SEPARATOR_TEXT, SERVICE_SEPARATOR_TEXT_NEW,
+                        "service_config separator text", count=SERVICE_SEPARATOR_COUNT)
+    return xml

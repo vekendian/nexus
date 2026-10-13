@@ -36,4 +36,9 @@
     <string name="nexus_str_tap_stop">Tap to stop</string>
     <string name="nexus_str_yes">Yes</string>
     <string name="nexus_str_no">No</string>
+    <string name="nexus_str_modules_add">Add module</string>
+    <string name="nexus_str_modules_picker_title">Choose a module (.dex)</string>
+    <string name="nexus_str_module_remove_title">Remove this module?</string>
+    <string name="nexus_str_module_remove_msg">%s will be removed from Nexus.</string>
+    <string name="nexus_str_modules_none_loaded">No module data available</string>
 </resources>

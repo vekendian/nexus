@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Inflated into nexus_modules_list once per persisted module.
+     Root is a card matching nexus_bg_card_sm, with the remove control in its
+     top-right corner and the filename as a tag above the title. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8.0dip"
+    android:background="@drawable/nexus_bg_card_sm"
+    android:orientation="horizontal"
+    android:padding="16.0dip">
+
+    <!-- Content column. weight=1 so a long name/description cannot push the
+         remove control out of the card. -->
+    <LinearLayout
+        android:layout_width="0.0dip"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.0"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/nexus_module_tag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/nexus_bg_tag"
+            android:paddingLeft="8.0dip"
+            android:paddingRight="8.0dip"
+            android:paddingTop="2.0dip"
+            android:paddingBottom="2.0dip"
+            android:textColor="@color/nexus_text2"
+            android:textSize="11.0sp" />
+
+        <TextView
+            android:id="@+id/nexus_module_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8.0dip"
+            android:textColor="@color/nexus_text"
+            android:textSize="16.0sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/nexus_module_meta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2.0dip"
+            android:textColor="@color/nexus_text2"
+            android:textSize="12.0sp" />
+
+        <TextView
+            android:id="@+id/nexus_module_desc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6.0dip"
+            android:textColor="@color/nexus_text2"
+            android:textSize="13.0sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/nexus_module_remove"
+        android:layout_width="32.0dip"
+        android:layout_height="32.0dip"
+        android:layout_marginLeft="8.0dip"
+        android:background="@drawable/nexus_bg_tag"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center">
+
+        <ImageView
+            android:layout_width="16.0dip"
+            android:layout_height="16.0dip"
+            android:src="@drawable/nexus_ic_close"
+            android:tint="@color/nexus_text2" />
+    </LinearLayout>
+</LinearLayout>

@@ -45,14 +45,27 @@
       "nexus_env_android": "0x7f050179",
       "nexus_env_abi": "0x7f05017a",
       "nexus_env_vspace": "0x7f05017b",
-      "nexus_env_root": "0x7f05017c"
+      "nexus_env_root": "0x7f05017c",
+      "nexus_modules_list": "0x7f05017d",
+      "nexus_modules_empty": "0x7f05017e",
+      "nexus_modules_add": "0x7f05017f",
+      "nexus_module_tag": "0x7f050180",
+      "nexus_module_title": "0x7f050181",
+      "nexus_module_meta": "0x7f050182",
+      "nexus_module_desc": "0x7f050183",
+      "nexus_module_remove": "0x7f050184",
+      "nexus_overlay": "0x7f050185",
+      "nexus_shell": "0x7f050186"
     },
     "drawable": {
       "nexus_bg_pill": "0x7f040070",
       "nexus_bg_ring_on": "0x7f040071",
       "nexus_bg_ring_off": "0x7f040072",
       "nexus_bg_dialog": "0x7f040073",
-      "nexus_bg_primary": "0x7f040074"
+      "nexus_bg_primary": "0x7f040074",
+      "nexus_bg_fab": "0x7f040075",
+      "nexus_ic_plus": "0x7f040076",
+      "nexus_ic_close": "0x7f040077"
     },
     "string": {
       "nexus_str_power_title": "0x7f09035e",
@@ -61,7 +74,15 @@
       "nexus_str_iface_stopped": "0x7f090361",
       "nexus_str_tap_stop": "0x7f090362",
       "nexus_str_yes": "0x7f090363",
-      "nexus_str_no": "0x7f090364"
+      "nexus_str_no": "0x7f090364",
+      "nexus_str_modules_add": "0x7f090365",
+      "nexus_str_modules_picker_title": "0x7f090366",
+      "nexus_str_module_remove_title": "0x7f090367",
+      "nexus_str_module_remove_msg": "0x7f090368",
+      "nexus_str_modules_none_loaded": "0x7f090369"
+    },
+    "layout": {
+      "nexus_module_card": "0x7f06002f"
     }
   },
   "gg_observed": {

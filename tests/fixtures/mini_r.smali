@@ -36,6 +36,65 @@
     .end sparse-switch
 .end method
 
+.method protected onActivityResult(IILandroid/content/Intent;)V
+.method protected onActivityResult(IILandroid/content/Intent;)V
+    .locals 2
+    new-instance v0, Landroid/lang/StringBuilder;
+
+    invoke-direct {v0}, Landroid/lang/StringBuilder;-><init>()V
+
+    iget-boolean v1, p0, Landroid/ext/r;->d:Z
+
+    if-eqz v1, :cond_0
+
+    const-string v1, "Installer: "
+
+    goto :goto_0
+
+    :cond_0
+    const-string v1, ""
+
+    :goto_0
+    invoke-virtual {v0, v1}, Landroid/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    const-string v1, "onActivityResult()"
+
+    invoke-virtual {v0, v1}, Landroid/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    invoke-virtual {v0}, Landroid/lang/StringBuilder;->toString()Ljava/lang/String;
+
+    move-result-object v0
+
+    invoke-static {v0}, Landroid/ext/e1;->d(Ljava/lang/String;)I
+
+    invoke-super {p0, p1, p2, p3}, Landroid/app/Activity;->onActivityResult(IILandroid/content/Intent;)V
+
+    iget-boolean v0, p0, Landroid/ext/r;->d:Z
+
+    if-eqz v0, :cond_1
+
+    invoke-static {p1, p2, p3}, Landroid/ext/b1;->F0(IILandroid/content/Intent;)V
+
+    goto :goto_1
+
+    :cond_1
+    invoke-static {}, Landroid/ext/s1;->u()Z
+
+    move-result p1
+
+    if-eqz p1, :cond_2
+
+    invoke-static {}, Landroid/ext/s1;->A()V
+
+    goto :goto_1
+
+    :cond_2
+    invoke-static {}, Landroid/ext/z;->m()V
+
+    :goto_1
+    return-void
+.end method
+
 .method protected onSaveInstanceState(Landroid/os/Bundle;)V
     sget-boolean v0, Landroid/ext/m2;->a:Z
 

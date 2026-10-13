@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 
 from .anchors import PatchError, replace_once
+from .modules import modules_methods, transform_activity_result
 
 REGISTERS_ANCHOR = '''\
 .method public onClick(Landroid/view/View;)V
@@ -30,7 +31,7 @@ COUNT_ANCHOR = '''\
 
     new-array v2, v1, [I'''
 COUNT_NEW = '''\
-    const/16 v1, 0xF
+    const/16 v1, 0x10
 
     new-array v2, v1, [I'''
 
@@ -51,7 +52,8 @@ _ARRAY_GG = ("btn_stop_service", "btn_start_usage", "check", "fix_it",
              "language", "help")
 _ARRAY_NEXUS = ("nexus_tab_home", "nexus_tab_modules", "nexus_tab_settings",
                 "nexus_power_card", "nexus_row_exit", "nexus_row_check",
-                "nexus_row_language", "nexus_row_help", "nexus_row_fix")
+                "nexus_row_language", "nexus_row_help", "nexus_row_fix",
+                "nexus_modules_add")
 
 
 def _array_new(ids) -> str:
@@ -273,6 +275,9 @@ def _tab_body(key: str, show: str, hides: list, tail: str, tabs_state: list, ids
     lines = [_panel_vis(show, "0x0", f"{key}p").rstrip("\n")]
     for i, h in enumerate(hides):
         lines.append(_panel_vis(h, "0x8", f"{key}h{i}").rstrip("\n"))
+    # The add button floats above the navbar and belongs to MODULES alone.
+    fab_vis = "0x0" if key == "modules" else "0x8"
+    lines.append(_panel_vis(ids.hex("nexus_modules_add"), fab_vis, f"{key}fab").rstrip("\n"))
     lines.append(DENSITY_BLOCK.rstrip("\n"))
     for tkey, tp, tl, ti in tabs_state:
         if tkey == key:
@@ -298,7 +303,8 @@ def _sparse_switch(ids) -> str:
              ("nexus_power_card", "sswitch_nexus_power"),
              ("nexus_row_exit", "sswitch_4"), ("nexus_row_check", "sswitch_3"),
              ("nexus_row_language", "sswitch_0"), ("nexus_row_help", "sswitch_1"),
-             ("nexus_row_fix", "sswitch_2")]
+             ("nexus_row_fix", "sswitch_2"),
+             ("nexus_modules_add", "sswitch_nexus_modules_add")]
     rows = [f"        {ids.gg(n)} -> :{lbl}" for n, lbl in gg]
     rows += [f"        {ids.hex(n)} -> :{lbl}" for n, lbl in nexus]
     return ("    :sswitch_data_0\n"
@@ -334,6 +340,14 @@ def _switch_new(ids) -> str:
     sput-boolean v1, Landroid/ext/r;->nexusPower:Z
 
     invoke-direct {p0}, Landroid/ext/r;->nexusPowerApply()V
+
+    goto :goto_1''')
+
+    # Add button: opens the SAF picker. The result comes back through the
+    # onActivityResult hook in modules.py.
+    parts.append('''\
+    :sswitch_nexus_modules_add
+    invoke-direct {p0}, Landroid/ext/r;->nexusModulesPick()V
 
     goto :goto_1''')
 
@@ -476,6 +490,9 @@ POWER_METHODS_NEW_RAW = r'''.field public static nexusTab:I
 
 
 @@NEXUS_ENV@@
+
+
+@@NEXUS_MODULES@@
 
 
 .method private nexusHasPrivPerms()Z
@@ -915,6 +932,8 @@ Z_NEW = '''    const/4 v0, 0x1
 
     invoke-direct {p0}, Landroid/ext/r;->nexusEnv()V
 
+    invoke-direct {p0}, Landroid/ext/r;->nexusModulesRender()V
+
     return-void
 .end method'''
 
@@ -980,6 +999,8 @@ POSTRESUME_NEW = '''    invoke-direct {p0, v0}, Landroid/ext/r;->y(Z)V
     invoke-direct {p0}, Landroid/ext/r;->nexusPowerApply()V
 
     invoke-direct {p0}, Landroid/ext/r;->nexusEnv()V
+
+    invoke-direct {p0}, Landroid/ext/r;->nexusModulesRender()V
 
     invoke-super {p0}, La/a;->onPostResume()V
 
@@ -1047,7 +1068,8 @@ def power_methods(ids) -> str:
     out = (POWER_METHODS_NEW_RAW
            .replace("@@NEXUS_APPLY_TAB@@", _apply_tab_method(ids))
            .replace("@@NEXUS_FADE_IN@@", _fade_in_method(ids))
-           .replace("@@NEXUS_ENV@@", ""))
+           .replace("@@NEXUS_ENV@@", "")
+           .replace("@@NEXUS_MODULES@@", modules_methods(ids)))
     # @@ID:name@@ rather than {ids.hex(...)}: the raw template is full of smali
     # braces ({p0}, {v0, v1}) which str.format would try to interpret.
     out = re.sub(r"@@ID:(\w+)@@", lambda m: ids.hex(m.group(1)), out)
@@ -1104,6 +1126,7 @@ def transform_smali(smali: str, ids) -> str:
     smali = replace_once(smali, ON_PAUSE_ANCHOR, ON_PAUSE_NEW, "onPause float guard")
     smali = replace_once(smali, POSTRESUME_ANCHOR, POSTRESUME_NEW, "onPostResume re-apply")
     smali = replace_once(smali, Z_ANCHOR, Z_NEW, "z() tab + power apply")
+    smali = transform_activity_result(smali)
     return smali
 
 
@@ -1211,3 +1234,40 @@ KBD_SELECTOR_NEW = '''<selector xmlns:android="http://schemas.android.com/apk/re
         android:drawable="@drawable/nexus_kbd_key_pressed" />
     <item android:drawable="@drawable/nexus_kbd_key_normal" />
 </selector>'''
+
+
+# ------------------------------------------------------- settings highlight ---
+
+# ConfigListAdapter.x() walks every settings row and, for rows whose Config$p
+# reports a truthy value, paints the row with a hardcoded 0x80949442 — a
+# half-alpha olive that reads as yellow over Nexus's dark background. In stock
+# GG that yellow is the only cue that a game setting is toggled on, so it is
+# replaced with an equally visible Nexus tone rather than dropped: the row keeps
+# its "this is set" highlight, tinted to the theme.
+CONFIG_ADAPTER = "smali/android/ext/ConfigListAdapter.smali"
+
+# 0x80949442 (stock, half-alpha olive) -> 0x33FF7A00 (Nexus orange at 20%
+# alpha). Opacity is kept low so the medium-weight row text stays legible on
+# top of the tint, and so the tint reads as a highlight rather than a fill.
+#
+# smali's `const` takes a signed 32-bit int, so the literal's sign depends on
+# the value: the stock colour has the high bit set and is written negative
+# (-0x7f6b6bbe), whereas 0x33FF7A00 fits in a positive int and must be written
+# as 0x33ff7a00. Writing the negated form makes baksmali reject the file with
+# "cannot fit into an int".
+SETTINGS_HIGHLIGHT_ANCHOR = '''\
+    :cond_2
+    if-eqz v4, :cond_3
+
+    const v4, -0x7f6b6bbe
+
+    invoke-virtual {v5, v4}, Landroid/view/View;->setBackgroundColor(I)V'''
+
+SETTINGS_HIGHLIGHT_NEW = SETTINGS_HIGHLIGHT_ANCHOR.replace(
+    "-0x7f6b6bbe", "0x33ff7a00")   # 0x33FF7A00 = 20% Nexus orange
+
+
+def transform_settings_highlight(smali: str) -> str:
+    """Retint the settings-row highlight from GG yellow to Nexus orange."""
+    return replace_once(smali, SETTINGS_HIGHLIGHT_ANCHOR,
+                        SETTINGS_HIGHLIGHT_NEW, "settings highlight")

@@ -16,10 +16,11 @@ from pathlib import Path
 from .anchors import PatchError, replace_once
 from .checks import is_patched, postflight, preflight
 from .ids import Ids
-from .layout import transform_main
+from .layout import transform_main, transform_service_config
 from .manifest import NEW_VERSION_NAME, rebrand
-from .smali import (DOWNLOAD_URL_NEW, DOWNLOAD_URL_OLD, KBD_LAYOUT_ANCHOR,
-                    KBD_LAYOUT_NEW, KBD_SELECTOR_NEW, transform_dialogs,
+from .smali import (CONFIG_ADAPTER, DOWNLOAD_URL_NEW, DOWNLOAD_URL_OLD,
+                    KBD_LAYOUT_ANCHOR, KBD_LAYOUT_NEW, KBD_SELECTOR_NEW,
+                    transform_dialogs, transform_settings_highlight,
                     transform_smali)
 from .tree import (LOCK_PATH, copy_resources, default_output, detect_version,
                    ensure_apktool_yml, make_output, read, resolve_tree, write)
@@ -131,6 +132,12 @@ def _patch(tree: Path, ids: Ids) -> None:
     # Dialog chrome. android/ext/f.smali method t() is the one funnel every
     # GG dialog reaches, so this is a single edit rather than a theme item.
     write(tree, DIALOG_FILE, transform_dialogs(read(tree, DIALOG_FILE), ids))
+    # Settings screen: orange section bands, no donate row, and the "this
+    # setting is on" highlight retinted from GG's yellow to Nexus orange.
+    write(tree, "res/layout/service_config.xml",
+          transform_service_config(read(tree, "res/layout/service_config.xml")))
+    write(tree, CONFIG_ADAPTER,
+          transform_settings_highlight(read(tree, CONFIG_ADAPTER)))
     # Download URL rewrite across the three sites that actually display/open
     # it. r$n/ShowApp carry it bare; r.smali carries it Lua-commented ("#...").
     for rel in ("smali/android/ext/r$n.smali", "smali/android/ext/ShowApp.smali"):
@@ -182,7 +189,7 @@ def cmd_ids(args) -> int:
         return 2
     print(f"ID lock file: {LOCK_PATH}")
     print(f"GG release recorded: {ids.data.get('gg_release')}   tree: {detect_version(tree)}")
-    for kind in ("id", "drawable", "string"):
+    for kind in ("id", "drawable", "layout", "string"):
         table = ids.nexus.get(kind, {})
         print(f"\nNexus {kind} ids ({len(table)}):")
         for name, hexval in sorted(table.items(), key=lambda kv: int(kv[1], 16)):

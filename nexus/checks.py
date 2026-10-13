@@ -15,15 +15,19 @@ from pathlib import Path
 
 from .anchors import PatchError, anchor_count
 from .ids import Ids
-from .layout import FRONT_TEXT_BLOCK, FRONT_TEXT_GONE, ROW_OPEN, ROW_OPEN_NEW, START_ANCHOR
+from .layout import (DONATE_ROW_RE, FRONT_TEXT_BLOCK, FRONT_TEXT_GONE, ROW_OPEN,
+                     ROW_OPEN_NEW, SERVICE_SEPARATOR_BG, SERVICE_SEPARATOR_COUNT,
+                     SERVICE_SEPARATOR_NEW, SERVICE_SEPARATOR_TEXT_NEW,
+                     START_ANCHOR)
 from .manifest import (APP_NAME_NEW, APP_NAME_OLD, NEW_VERSION_NAME, PKG_NEW,
                         PKG_OLD, SMALI_NEW, SMALI_OLD)
-from .smali import (ARRAY_ANCHOR, COUNT_ANCHOR, COUNT_NEW,
+from .smali import (ARRAY_ANCHOR, CONFIG_ADAPTER, COUNT_ANCHOR, COUNT_NEW,
                     DOWNLOAD_URL_NEW, DOWNLOAD_URL_OLD, KBD_LAYOUT_ANCHOR,
                     KBD_LAYOUT_NEW, ON_PAUSE_ANCHOR,
                     ON_PAUSE_NEW, ONCLICK_METHOD_RE, POSTRESUME_ANCHOR,
                     POSTRESUME_NEW, POWER_METHODS_ANCHOR,
                     RESUME_ANCHOR, RESUME_NEW,
+                    SETTINGS_HIGHLIGHT_ANCHOR, SETTINGS_HIGHLIGHT_NEW,
                     SWITCH_ANCHOR, Z_ANCHOR, Z_NEW)
 from .tree import RES_DIR, icon_resource_files, read, smali_roots
 
@@ -77,6 +81,11 @@ def preflight(tree: Path, ids: Ids) -> list:
             errors.append(f"nexus_strings.xml: missing definition for {_name}")
 
     for _rel in ["res/values/nexus_strings.xml", "res/values/nexus_styles.xml",
+                 "res/layout/nexus_module_card.xml",
+                 "smali/android/ext/r$ModuleRemove.smali",
+                 "res/drawable/nexus_bg_fab.xml",
+                 "res/drawable/nexus_ic_plus.xml",
+                 "res/drawable/nexus_ic_close.xml",
                  "res/drawable/nexus_bg_dialog.xml", "res/drawable/nexus_bg_button.xml",
                  "res/drawable/nexus_kbd_background.xml", "res/drawable/nexus_kbd_key.xml",
                  "res/drawable/nexus_kbd_key_pressed.xml",
@@ -103,6 +112,27 @@ def preflight(tree: Path, ids: Ids) -> list:
     _ks = read(tree, "res/drawable/btn_keyboard_key_lxx_dark.xml")
     if "<selector" not in _ks or "</selector>" not in _ks:
         errors.append("btn_keyboard_key_lxx_dark.xml: <selector> not found")
+
+    # settings screen: donate row to delete, purple bands to recolour
+    _sc = tree / "res/layout/service_config.xml"
+    if not _sc.is_file():
+        errors.append("service_config.xml missing")
+    else:
+        _scx = _sc.read_text(encoding="utf-8")
+        _n = len(DONATE_ROW_RE.findall(_scx))
+        if _n != 1:
+            errors.append(f"service_config: donate row found {_n}x (expected 1x)")
+        if anchor_count(_scx, SERVICE_SEPARATOR_BG) != SERVICE_SEPARATOR_COUNT:
+            errors.append(
+                f"service_config: separator bands found "
+                f"{anchor_count(_scx, SERVICE_SEPARATOR_BG)}x "
+                f"(expected {SERVICE_SEPARATOR_COUNT}x)")
+    _ca = tree / CONFIG_ADAPTER
+    if not _ca.is_file():
+        errors.append(f"settings highlight: {CONFIG_ADAPTER} missing")
+    elif anchor_count(_ca.read_text(encoding="utf-8"),
+                      SETTINGS_HIGHLIGHT_ANCHOR) != 1:
+        errors.append("settings highlight: yellow const anchor not found")
 
     for what, blob, cnt in [
         ("front_text block", FRONT_TEXT_BLOCK, 1),
@@ -188,13 +218,23 @@ def postflight(tree: Path, ids: Ids) -> list:
                  "@string/nexus_str_power_sub"):
         if _str not in main:
             errors.append(f"main.xml: missing {_str}")
+    # Strings used only from XML (never set from smali). Kept out of the
+    # smali-reference check below; assert they are defined in the resource file.
+    _xml_only = {"nexus_str_power_title", "nexus_str_modules_add",
+                 "nexus_str_modules_picker_title",
+                 "nexus_str_module_remove_title", "nexus_str_module_remove_msg"}
+    _ns_all = RES_DIR / "res/values/nexus_strings.xml"
+    _ns_text = _ns_all.read_text(encoding="utf-8") if _ns_all.is_file() else ""
+    for _nm in sorted(_xml_only):
+        if f"@string/{_nm}" not in main and _nm not in _ns_text:
+            errors.append(f"nexus_strings.xml: missing {_nm}")
     for _nm, _hexval in ids.nexus.get("string", {}).items():
-        if _nm == "nexus_str_power_title":
-            continue  # XML default only; never set from smali
+        if _nm in _xml_only:
+            continue  # XML-only; never set from smali
         if f"const v1, {_hexval}" not in smali and f"const v0, {_hexval}" not in smali:
             errors.append(f"r.smali: {_nm} ({_hexval}) not referenced")
-    if smali.count("Landroid/content/Context;->getString(I)Ljava/lang/String;") != 8:
-        errors.append("r.smali: expected 8 Context.getString() calls")
+    if smali.count("Landroid/content/Context;->getString(I)Ljava/lang/String;") != 9:
+        errors.append("r.smali: expected 9 Context.getString() calls")
     for _row_id in ("0x7f050167", "0x7f050168", "0x7f050169", "0x7f05016a", "0x7f05016b"):
         if smali.count(_row_id) != 2:
             errors.append(f"r.smali: settings row {_row_id} appears "
@@ -210,6 +250,38 @@ def postflight(tree: Path, ids: Ids) -> list:
         errors.append("main.xml: front_text is not hidden (visibility=gone)")
     if main.count(ROW_OPEN_NEW) != 2:
         errors.append("main.xml: button rows not hidden (visibility=gone)")
+
+    # settings screen: donate row gone, bands orange, highlight retinted
+    _sc = tree / "res/layout/service_config.xml"
+    if not _sc.is_file():
+        errors.append("service_config.xml missing from output")
+    else:
+        _scx = _sc.read_text(encoding="utf-8")
+        if DONATE_ROW_RE.search(_scx):
+            errors.append("service_config: donate row still present")
+        if anchor_count(_scx, SERVICE_SEPARATOR_BG):
+            errors.append("service_config: stock purple separator bands remain")
+        if anchor_count(_scx, SERVICE_SEPARATOR_NEW) != SERVICE_SEPARATOR_COUNT:
+            errors.append(
+                f"service_config: orange separator bands found "
+                f"{anchor_count(_scx, SERVICE_SEPARATOR_NEW)}x "
+                f"(expected {SERVICE_SEPARATOR_COUNT}x)")
+        # Grey-on-orange is 1.12:1; the dark text colour is what makes the band readable.
+        if anchor_count(_scx, SERVICE_SEPARATOR_TEXT_NEW) != SERVICE_SEPARATOR_COUNT:
+            errors.append(
+                f"service_config: separator text colour found "
+                f"{anchor_count(_scx, SERVICE_SEPARATOR_TEXT_NEW)}x "
+                f"(expected {SERVICE_SEPARATOR_COUNT}x)")
+    _ca = tree / CONFIG_ADAPTER
+    if not _ca.is_file():
+        errors.append(f"settings highlight: {CONFIG_ADAPTER} missing from output")
+    else:
+        _cax = _ca.read_text(encoding="utf-8")
+        if anchor_count(_cax, SETTINGS_HIGHLIGHT_ANCHOR):
+            errors.append("settings highlight: GG yellow still present")
+        if anchor_count(_cax, SETTINGS_HIGHLIGHT_NEW) != 1:
+            errors.append("settings highlight: not retinted to Nexus orange")
+
     if MARKER not in smali:
         errors.append("r.smali: marker missing")
     if "0x7f050160" not in smali or ":sswitch_nexus_tab_home" not in smali:
@@ -279,6 +351,7 @@ def postflight(tree: Path, ids: Ids) -> list:
     if ("invoke-direct {p0}, Landroid/ext/r;->nexusApplyTab()V\n\n"
             "    invoke-direct {p0}, Landroid/ext/r;->nexusPowerApply()V\n\n"
             "    invoke-direct {p0}, Landroid/ext/r;->nexusEnv()V\n\n"
+            "    invoke-direct {p0}, Landroid/ext/r;->nexusModulesRender()V\n\n"
             "    invoke-super {p0}, La/a;->onPostResume()V") not in smali:
         errors.append("r.smali: hooks must sit in onPostResume AFTER y(true)")
     if ON_PAUSE_NEW not in smali:
@@ -305,8 +378,15 @@ def postflight(tree: Path, ids: Ids) -> list:
         errors.append("r.smali: z() hooks missing")
     if smali.count("sput v0, Landroid/ext/r;->nexusTab:I") != 3:
         errors.append("r.smali: expected 3 tab-save sput writes")
-    if smali.count("const/16 v1, 0xF") != 1:
-        errors.append("r.smali: button count not updated to 0xF for 15-entry array")
+    if smali.count("const/16 v1, 0x10") != 1:
+        errors.append("r.smali: button count not updated to 0x10 for 16-entry array")
+    if ":sswitch_nexus_modules_add" not in smali:
+        errors.append("r.smali: module add-button case missing")
+    for _m in ("nexusModulesPick", "nexusModulesRender", "nexusModulesAdd",
+               "nexusModulesRemove", "nexusModulesCard", "nexusModulesName"):
+        if f"Landroid/ext/r;->{_m}(" not in smali and f".method private {_m}(" not in smali \
+                and f".method public {_m}(" not in smali:
+            errors.append(f"r.smali: module method {_m} missing")
     if smali.count("0x7f050166") < 1:
         errors.append("r.smali: power card id 0x7f050166 not present")
     for _id in ("0x7f05016c", "0x7f05016d", "0x7f05016e",

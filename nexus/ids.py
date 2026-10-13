@@ -64,7 +64,7 @@ class Ids:
 
     # -- Nexus (pinned) lookups -------------------------------------------
     def _pinned(self, name: str) -> int:
-        for kind in ("id", "drawable", "string"):
+        for kind in ("id", "drawable", "layout", "string"):
             table = self.nexus.get(kind, {})
             if name in table:
                 return int(table[name], 16)
@@ -84,7 +84,7 @@ class Ids:
     def pinned_table(self) -> list:
         """``[(type, name, hex)]`` in the order public.xml lines must be emitted."""
         rows = []
-        for kind in ("id", "drawable", "string"):
+        for kind in ("id", "drawable", "layout", "string"):
             for name, hexval in self.nexus.get(kind, {}).items():
                 rows.append((kind, name, hexval))
         return rows
