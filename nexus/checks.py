@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .anchors import PatchError
+from .anchors import PatchError, anchor_count
 from .ids import Ids
 from .layout import FRONT_TEXT_BLOCK, FRONT_TEXT_GONE, ROW_OPEN, ROW_OPEN_NEW, START_ANCHOR
 from .manifest import (APP_NAME_NEW, APP_NAME_OLD, NEW_VERSION_NAME, PKG_NEW,
@@ -21,8 +21,9 @@ from .manifest import (APP_NAME_NEW, APP_NAME_OLD, NEW_VERSION_NAME, PKG_NEW,
 from .smali import (ARRAY_ANCHOR, COUNT_ANCHOR, COUNT_NEW,
                     DOWNLOAD_URL_NEW, DOWNLOAD_URL_OLD, KBD_LAYOUT_ANCHOR,
                     KBD_LAYOUT_NEW, ON_PAUSE_ANCHOR,
-                    ON_PAUSE_NEW, POSTRESUME_ANCHOR, POSTRESUME_NEW, POWER_METHODS_ANCHOR,
-                    REGISTERS_ANCHOR, REGISTERS_NEW, RESUME_ANCHOR, RESUME_NEW,
+                    ON_PAUSE_NEW, ONCLICK_METHOD_RE, POSTRESUME_ANCHOR,
+                    POSTRESUME_NEW, POWER_METHODS_ANCHOR,
+                    RESUME_ANCHOR, RESUME_NEW,
                     SWITCH_ANCHOR, Z_ANCHOR, Z_NEW)
 from .tree import RES_DIR, icon_resource_files, read, smali_roots
 
@@ -97,7 +98,7 @@ def preflight(tree: Path, ids: Ids) -> list:
         errors.append("r.smali: commented download-URL literal not found")
 
     # keyboard anchors
-    if read(tree, "res/layout/keyboard.xml").count(KBD_LAYOUT_ANCHOR) != 1:
+    if anchor_count(read(tree, "res/layout/keyboard.xml"), KBD_LAYOUT_ANCHOR) != 1:
         errors.append("keyboard.xml: background anchor not found")
     _ks = read(tree, "res/drawable/btn_keyboard_key_lxx_dark.xml")
     if "<selector" not in _ks or "</selector>" not in _ks:
@@ -110,21 +111,23 @@ def preflight(tree: Path, ids: Ids) -> list:
         ("ScrollView close", "        </android.fix.ScrollView>", 1),
         ("start-button/navbar insert point", START_ANCHOR, 1),
     ]:
-        got = main.count(blob)
+        got = anchor_count(main, blob)
         if got != cnt:
             errors.append(f"main.xml anchor {what!r} found {got}x (expected {cnt}x)")
 
     for what, blob in [
-        ("onClick .registers", REGISTERS_ANCHOR),
         ("y(Z)V button-count const", COUNT_ANCHOR),
         (":array_0 payload", ARRAY_ANCHOR),
         ("onClick sparse-switch block", SWITCH_ANCHOR),
     ]:
-        if smali.count(blob) != 1:
-            errors.append(f"r.smali anchor {what!r} found {smali.count(blob)}x (expected 1x)")
+        if anchor_count(smali, blob) != 1:
+            errors.append(f"r.smali anchor {what!r} found {anchor_count(smali, blob)}x (expected 1x)")
 
-    if styles.count(STYLES_ANCHOR) != 1:
-        errors.append(f"styles.xml anchor found {styles.count(STYLES_ANCHOR)}x (expected 1x)")
+    if not ONCLICK_METHOD_RE.search(smali):
+        errors.append("r.smali: onClick(Landroid/view/View;)V not found")
+
+    if anchor_count(styles, STYLES_ANCHOR) != 1:
+        errors.append(f"styles.xml anchor found {anchor_count(styles, STYLES_ANCHOR)}x (expected 1x)")
 
     if not (RES_DIR / "res").is_dir():
         errors.append(f"resources missing: {RES_DIR / 'res'}")
@@ -145,10 +148,13 @@ def preflight(tree: Path, ids: Ids) -> list:
         errors.append("rebrand: application android:label not found in manifest")
     if manifest.count('android:label="Game"') != 2:
         errors.append('rebrand: expected 2 activity android:label="Game"')
-    hw = ('<activity\n            android:label="Game"\n'
-          '            android:icon="@mipmap/ic_hw_48dp"')
-    if hw not in manifest:
+    # Located by attribute, not indentation: MT Manager pretty-prints one
+    # attribute per line while apktool collapses them onto the element's line.
+    hw = re.search(r'<activity\b[^>]*?android:icon="@mipmap/ic_hw_48dp"[^>]*?>', manifest)
+    if not hw or "ActivityMain" not in hw.group(0):
         errors.append("rebrand: ActivityMain HW launcher block not found")
+    if manifest.count('android.intent.category.LEANBACK_LAUNCHER') != 2:
+        errors.append("rebrand: expected 2 LEANBACK_LAUNCHER categories in clean manifest")
     if manifest.count('android.intent.category.LAUNCHER') != 2:
         errors.append("rebrand: expected 2 LAUNCHER categories in clean manifest")
     strings = tree / "res/values/strings.xml"
@@ -208,8 +214,12 @@ def postflight(tree: Path, ids: Ids) -> list:
         errors.append("r.smali: marker missing")
     if "0x7f050160" not in smali or ":sswitch_nexus_tab_home" not in smali:
         errors.append("r.smali: tab wiring missing")
-    if ".method public onClick(Landroid/view/View;)V\n    .registers 12" not in smali:
-        errors.append("r.smali: onClick .registers is not 12")
+    # The decoder picks the spelling: MT Manager writes `.registers 12`
+    # (params + locals), apktool writes `.locals 10` (locals only). Both
+    # describe the same 12-register frame, so accept either.
+    if not re.search(r"^\.method public onClick\(Landroid/view/View;\)V\n"
+                     r"    \.(?:registers 12|locals 10)$", smali, re.M):
+        errors.append("r.smali: onClick frame was not widened to 12 registers")
     if "DecelerateInterpolator" not in smali:
         errors.append("r.smali: navbar animation missing")
     # Each _tab_body call emits 3 check-casts (one per navbar tab). The tap

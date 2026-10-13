@@ -52,6 +52,15 @@ if [ ! -f "$APKTOOL" ]; then
     }
 fi
 command -v "$AAPT"   >/dev/null || { echo "error: aapt2 not found: $AAPT" >&2; exit 2; }
+# apktool only reports "Could not identify aapt binary as executable" when the
+# resolved binary is a dangling symlink or has a broken shared-library link, so
+# prove it actually runs before handing it a tree.
+"$AAPT" version >/dev/null 2>&1 || {
+    echo "error: aapt2 at '$AAPT' is present but will not run:" >&2
+    echo "       $(\"$AAPT\" version 2>&1 | head -1)" >&2
+    echo "       set NEXUS_AAPT=<path to a working aapt2>." >&2
+    exit 2
+}
 command -v zipalign >/dev/null || { echo "error: zipalign not found" >&2; exit 2; }
 command -v apksigner>/dev/null || { echo "error: apksigner not found" >&2; exit 2; }
 [ -f "$KEYSTORE" ]  || { echo "error: keystore not found: $KEYSTORE" >&2; exit 2; }

@@ -36,8 +36,9 @@ modifies the tree you point it at.
 ## Quick start
 
 ```bash
-# 1. decode (apktool 2.8.1 + aapt2 is the known-good combo)
-apktool d -f -s --aapt /usr/bin/aapt2 gg-499.2.apk -o gg_src
+# 1. decode. apktool 2.8.1 is the pinned decoder; pass the aapt2 you want
+#    used, because `aapt2` on PATH is not always runnable.
+java -jar tools/apktool-2.8.1.jar d -f -s gg-499.2.apk -o gg_src
 
 # 2. sanity-check the tree without modifying anything
 python3 nexus.py check --src gg_src
@@ -46,6 +47,8 @@ python3 nexus.py check --src gg_src
 python3 nexus.py apply --src gg_src
 
 # 4. build a signed APK
+NEXUS_APKTOOL=tools/apktool-2.8.1.jar \
+NEXUS_AAPT=/usr/lib/android-sdk/build-tools/debian/aapt2 \
 bash build.sh --src gg_src_nexus_output --out nexus-1.0.0.apk
 
 # 5. install

@@ -7,7 +7,7 @@ instead of being frozen in as hex literals.
 
 from __future__ import annotations
 
-from .anchors import PatchError, replace_once
+from .anchors import PatchError, find_span, replace_exact, replace_once
 
 FRONT_TEXT_BLOCK = '''\
             <android.fix.TextView
@@ -412,19 +412,23 @@ def render(version: str) -> str:
 
 
 def transform_main(main: str, version: str) -> str:
-    if FRONT_TEXT_BLOCK not in main:
-        raise PatchError("front_text block disappeared mid-apply")
     main = replace_once(main, FRONT_TEXT_BLOCK, "", "front_text relocation")
-    start = main.index("        <android.fix.ScrollView")
-    end = main.index("        </android.fix.ScrollView>")
-    end += len("        </android.fix.ScrollView>")
+    # The ScrollView is located by tag, not by indentation, so both the
+    # pretty-printed (MT Manager) and inline (apktool) decodes match.
+    span = find_span(main, "<android.fix.ScrollView")
+    if span is None:
+        raise PatchError("ScrollView open tag not found")
+    start = span[0]
+    close = main.find("</android.fix.ScrollView>", start)
+    if close == -1:
+        raise PatchError("ScrollView close tag not found")
+    end = close + len("</android.fix.ScrollView>")
     main = main[:start] + _scroll_view_block(version) + main[end:]
-    if main.count(ROW_OPEN) != 2:
-        raise PatchError(f"button rows anchor found {main.count(ROW_OPEN)}x mid-apply")
-    main = main.replace(ROW_OPEN, ROW_OPEN_NEW)
+    main = replace_exact(main, ROW_OPEN, ROW_OPEN_NEW,
+                         "button rows", count=2)
     main = replace_once(main, START_ANCHOR,
                         START_ANCHOR.replace(
-                            "        </android.fix.LinearLayout>\n    </android.fix.LinearLayout>",
-                            f"        </android.fix.LinearLayout>\n{NAVBAR}\n    </android.fix.LinearLayout>"),
+                            "</android.fix.LinearLayout>\n    </android.fix.LinearLayout>",
+                            f"</android.fix.LinearLayout>\n{NAVBAR}\n    </android.fix.LinearLayout>"),
                         "navbar insert")
     return main

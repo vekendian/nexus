@@ -41,11 +41,17 @@ def icon_resource_files() -> list:
 
 
 def resolve_tree(src: str) -> Path:
+    """Locate an apktool-decoded GG tree, MT Manager's layout included.
+
+    MT Manager writes apktool.json rather than apktool.yml, so a missing .yml
+    is not by itself fatal: accept a tree that carries apktool.json too. The
+    .yml is synthesized later, during apply, via ensure_apktool_yml().
+    """
     tree = Path(src).expanduser().resolve()
     if not tree.is_dir():
         raise PatchError(f"tree not found: {tree}")
-    if not (tree / "apktool.yml").is_file():
-        raise PatchError(f"not an apktool decode (no apktool.yml): {tree}")
+    if not (tree / "apktool.yml").is_file() and not (tree / "apktool.json").is_file():
+        raise PatchError(f"not an apktool decode (no apktool.yml or apktool.json): {tree}")
     return tree
 
 
@@ -121,27 +127,44 @@ def make_output(tree: Path, out: Path, force: bool = False) -> None:
 # ---------------------------------------------------------------- helpers ---
 
 def ensure_apktool_yml(tree: Path) -> None:
-    """MT Manager trees carry apktool.json, but the apktool CLI needs apktool.yml."""
+    """MT Manager trees carry apktool.json, but the apktool CLI needs apktool.yml.
+
+    The keys written here are apktool 2.8.1's schema (`versionInfo`, `sdkInfo`,
+    `packageInfo`); the older MetaInfo layout apktool 1.x accepted is rejected
+    by 2.8.1 with "versionInfo lines not found".
+    """
     yml = tree / "apktool.yml"
     j = tree / "apktool.json"
     if yml.is_file() or not j.is_file():
         return
     import json
     meta = json.loads(j.read_text(encoding="utf-8"))
-    pkg = meta.get("PackageInfo", {})
-    ver = meta.get("VersionInfo", {})
+    ver = meta.get("VersionInfo") or {}
+    sdk = meta.get("sdkInfo") or {}
     lines = [
-        "!!brut.androlib.meta.MetaInfo",
+        "!!brut.androlib.apk.ApkInfo",
         f"apkFileName: {meta.get('apkFileName', 'unknown.apk')}",
+        "doNotCompress:",
+        "- resources.arsc",
         f"isFrameworkApk: {str(meta.get('isFrameworkApk', False)).lower()}",
-        f"usesFramework:",
-        f"  id: {pkg.get('id', 'unknown')}",
-        f"  version: {ver.get('version', 'unknown')}",
+        "packageInfo:",
+        "  forcedPackageId: '127'",
+        "  renameManifestPackage: null",
+        f"resourcesAreCompressed: {str(not meta.get('sparseResources', False)).lower()}",
+        "sdkInfo:",
+        f"  minSdkVersion: '{sdk.get('minSdkVersion', '21')}'",
+        f"  targetSdkVersion: '{sdk.get('targetSdkVersion', '24')}'",
+        f"sharedLibrary: {str(bool(meta.get('sharedLibrary', False))).lower()}",
+        f"sparseResources: {str(bool(meta.get('sparseResources', False))).lower()}",
+        "unknownFiles: {}",
+        "usesFramework:",
+        "  ids:",
+        "  - 1",
+        "  tag: null",
+        "version: 2.8.1",
+        "versionInfo:",
         f"  versionCode: '{ver.get('versionCode', '1')}'",
-        f"version: {ver.get('version', 'unknown')}",
-        f"versionCode: '{ver.get('versionCode', '1')}'",
-        "minSdkVersion: '21'",
-        "targetSdkVersion: '21'",
+        f"  versionName: {ver.get('versionName', 'unknown')}",
         "",
     ]
     yml.write_text("\n".join(lines), encoding="utf-8")

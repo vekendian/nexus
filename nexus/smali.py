@@ -1054,6 +1054,35 @@ def power_methods(ids) -> str:
     return out
 
 
+# onClick(Landroid/view/View;)V is an instance method, so its frame is
+# `.registers` (params + locals) or, as apktool's baksmali writes it,
+# `.locals` (locals only, params implied). Both encode the same 2-register
+# frame, and Nexus's injected switch needs room for v0..v9. Widening the
+# frame is therefore +8 whichever spelling the decoder chose.
+ONCLICK_METHOD = ".method public onClick(Landroid/view/View;)V"
+ONCLICK_METHOD_RE = re.compile(r"^\.method public onClick\(Landroid/view/View;\)V$", re.M)
+ONCLICK_REGISTER_GROWTH = 8
+
+
+def widen_onclick_frame(smali: str) -> str:
+    """Give onClick enough registers for the injected tab switch.
+
+    Reads whichever directive the decoder emitted and writes the widened
+    count back in the same spelling, so an apktool tree stays `.locals` and
+    an MT Manager tree stays `.registers`.
+    """
+    m = re.search(r"^(" + re.escape(ONCLICK_METHOD) + r")\n(\s*\.(?:registers|locals)\s+\d+)\s*$",
+                  smali, re.M)
+    if not m:
+        raise PatchError("onClick frame: method header or register directive not found")
+    head = re.match(r"^(\s*)(\.(?:registers|locals))\s+(\d+)$", m.group(2))
+    indent, directive, count = head.group(1), head.group(2), int(head.group(3))
+    # `.registers` counts params too, so both spellings widen by the same delta.
+    want = count + ONCLICK_REGISTER_GROWTH
+    line = f"{indent}{directive} {want}"
+    return smali[:m.start()] + m.group(1) + "\n" + line + smali[m.end():]
+
+
 def render(ids) -> dict:
     """Everything that gets spliced into r.smali, built fresh each call."""
     return {
@@ -1064,7 +1093,7 @@ def render(ids) -> dict:
 
 def transform_smali(smali: str, ids) -> str:
     parts = render(ids)
-    smali = replace_once(smali, REGISTERS_ANCHOR, REGISTERS_NEW, "onClick .registers")
+    smali = widen_onclick_frame(smali)
     smali = replace_once(smali, COUNT_ANCHOR, COUNT_NEW, "button-count const")
     smali = replace_once(smali, ARRAY_ANCHOR, _array_new(ids), ":array_0 payload")
     smali = replace_once(smali, SWITCH_ANCHOR, parts["switch"], "onClick sparse-switch")
@@ -1113,7 +1142,8 @@ DIALOG_SURFACE = '''\
 '''
 
 DIALOG_PRIMARY = '''\
-    invoke-virtual {p0}, Landroid/app/AlertDialog;->getButton(I)Landroid/widget/Button;
+    const/4 v2, 0x0
+    invoke-virtual {p0, v2}, Landroid/app/AlertDialog;->getButton(I)Landroid/widget/Button;
     move-result-object v1
     if-eqz v1, :nexus_primary_done
     const v2, @@ID:nexus_bg_primary@@

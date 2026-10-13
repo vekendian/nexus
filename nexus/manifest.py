@@ -48,31 +48,31 @@ def transform_manifest_identity(manifest: str) -> str:
     manifest, cnt = re.subn(r'android:label="Game"', 'android:label="Nexus"', manifest)
     if cnt != 2:
         raise PatchError(f'activity android:label="Game" matched {cnt}x (expected 2x)')
-    hw = ('<activity\n            android:label="Nexus"\n'
-          '            android:icon="@mipmap/ic_hw_48dp"\n'
-          '            android:name="org.vekendian.nexus.ActivityMain"')
-    if hw not in manifest:
-        raise PatchError("ActivityMain launcher block not found (icon/label changed?)")
-    i = manifest.index(hw)
-    j = manifest.index('</activity>', i)
-    block = manifest[i:j]
-    filt = ('<intent-filter>\n'
-            '                <action\n'
-            '                    android:name="android.intent.action.MAIN" />\n'
-            '                <category\n'
-            '                    android:name="android.intent.category.LAUNCHER" />\n'
-            '            </intent-filter>\n'
-            '            <intent-filter>\n'
-            '                <action\n'
-            '                    android:name="android.intent.action.MAIN" />\n'
-            '                <category\n'
-            '                    android:name="android.intent.category.LEANBACK_LAUNCHER" />\n'
-            '            </intent-filter>\n')
-    if filt not in block:
-        raise PatchError("ActivityMain LAUNCHER/LEANBACK intent-filters not found")
-    manifest = manifest[:i] + block.replace(filt, "") + manifest[j:]
+    # Drop the TV launcher from the ActivityMain entry so GG ships one icon,
+    # not a TV one. The block is located by attribute rather than by
+    # indentation: MT Manager pretty-prints attributes one per line while
+    # apktool collapses them onto the element's line.
+    m = re.search(r'<activity\b[^>]*?android:icon="@mipmap/ic_hw_48dp"[^>]*?>', manifest)
+    if not m:
+        raise PatchError("ActivityMain launcher block not found (icon changed?)")
+    if 'ActivityMain' not in m.group(0):
+        raise PatchError("TV launcher activity is not ActivityMain (icon reused?)")
+    i = manifest.index('<intent-filter', m.end())
+    j = manifest.index('</intent-filter>', i) + len('</intent-filter>')
+    # Both filters (MAIN+LAUNCHER and MAIN+LEANBACK_LAUNCHER) go, leaving the
+    # phone activity as the app's single launcher entry.
+    k = manifest.index('</intent-filter>', j) + len('</intent-filter>')
+    block = manifest[i:k]
+    if "android.intent.category.LAUNCHER" not in block:
+        raise PatchError("ActivityMain LAUNCHER intent-filter not found")
+    if "android.intent.category.LEANBACK_LAUNCHER" not in block:
+        raise PatchError("ActivityMain LEANBACK_LAUNCHER intent-filter not found")
+    manifest = manifest[:i] + manifest[k:]
     if manifest.count('android.intent.category.LAUNCHER') != 1:
         raise PatchError("expected exactly 1 LAUNCHER category after HW removal")
+    # MainActivity keeps its own LEANBACK filter; only ActivityMain's pair goes.
+    if manifest.count('android.intent.category.LEANBACK_LAUNCHER') != 1:
+        raise PatchError("expected exactly 1 LEANBACK_LAUNCHER category after HW removal")
     return manifest
 
 
