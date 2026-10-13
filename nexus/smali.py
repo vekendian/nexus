@@ -1078,7 +1078,74 @@ def transform_smali(smali: str, ids) -> str:
     return smali
 
 
-# ------------------------------------------------------------------- url ---
+# ---------------------------------------------------------------- dialogs ---
+
+# android/ext/f.smali is GameGuardian's obfuscated Alert helper. Method
+# c(Context) builds every AlertDialog.Builder, and every one of them ends up in
+# t(AlertDialog), which calls show() and then does post-show window fixups.
+# Method t() is therefore the single funnel for dialog styling: 46 of 46
+# creation sites reach it.
+#
+# The anchor pins the show() call together with the h() install-mode check that
+# follows it, because t() must stay unique and h() is what decides whether the
+# remaining fixups run at all (it returns true when MainService is absent, i.e.
+# install mode). The surface goes BEFORE show() so the Window has its
+# background before the decor is drawn; the button goes AFTER show() because
+# getButton() is only non-null once the dialog exists, and crucially BEFORE the
+# h() call so it still runs in install mode.
+DIALOG_ANCHOR = '''\
+    invoke-virtual {p0}, Landroid/app/Dialog;->show()V
+
+    invoke-static {}, Landroid/ext/f;->h()Z
+'''
+
+DIALOG_SURFACE = '''\
+    invoke-virtual {p0}, Landroid/app/AlertDialog;->getContext()Landroid/content/Context;
+    move-result-object v1
+    invoke-virtual {v1}, Landroid/content/Context;->getResources()Landroid/content/res/Resources;
+    move-result-object v1
+    const v2, @@ID:nexus_bg_dialog@@
+    invoke-virtual {v1, v2}, Landroid/content/res/Resources;->getDrawable(I)Landroid/graphics/drawable/Drawable;
+    move-result-object v1
+    invoke-virtual {p0}, Landroid/app/AlertDialog;->getWindow()Landroid/view/Window;
+    move-result-object v2
+    invoke-virtual {v2, v1}, Landroid/view/Window;->setBackgroundDrawable(Landroid/graphics/drawable/Drawable;)V
+'''
+
+DIALOG_PRIMARY = '''\
+    invoke-virtual {p0}, Landroid/app/AlertDialog;->getButton(I)Landroid/widget/Button;
+    move-result-object v1
+    if-eqz v1, :nexus_primary_done
+    const v2, @@ID:nexus_bg_primary@@
+    invoke-virtual {v1, v2}, Landroid/widget/Button;->setBackgroundResource(I)V
+    const v2, 0xff1a1a1c
+    invoke-virtual {v1, v2}, Landroid/widget/Button;->setTextColor(I)V
+    :nexus_primary_done
+'''
+
+
+def _dialog_new(ids) -> str:
+    """t() with the surface and primary-button blocks spliced around show().
+
+    v0 is left alone: t() reuses it as the constant-0 argument for the f.l,
+    f.f and f.k calls that follow. v1/v2 are scratch and are dead at this point.
+    """
+    return (DIALOG_SURFACE
+            + "\n    invoke-virtual {p0}, Landroid/app/Dialog;->show()V\n\n"
+            + DIALOG_PRIMARY
+            + "\n    invoke-static {}, Landroid/ext/f;->h()Z\n")
+
+
+def dialog_new(ids) -> str:
+    return _dialog_new(ids)
+
+
+def transform_dialogs(smali: str, ids) -> str:
+    new = re.sub(r"@@ID:(\w+)@@", lambda m: ids.hex(m.group(1)), _dialog_new(ids))
+    return replace_once(smali, DIALOG_ANCHOR, new, "f.t dialog chrome")
+
+
+# ----------------------------------------------------------------- url ---
 
 def nexus_encode_url(url: str) -> str:
     """Encode a URL the way GameGuardian's obfuscator does.

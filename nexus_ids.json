@@ -50,7 +50,9 @@
     "drawable": {
       "nexus_bg_pill": "0x7f040070",
       "nexus_bg_ring_on": "0x7f040071",
-      "nexus_bg_ring_off": "0x7f040072"
+      "nexus_bg_ring_off": "0x7f040072",
+      "nexus_bg_dialog": "0x7f040073",
+      "nexus_bg_primary": "0x7f040074"
     },
     "string": {
       "nexus_str_power_title": "0x7f09035e",

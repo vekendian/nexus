@@ -7,8 +7,16 @@
   dialog the app shows — including ones built from the service context — without
   touching any of the ~300 AlertDialog.Builder call sites.
 
-  Caveat: some GameGuardian dialogs inflate their own layouts, which carry their
-  own text colours. Those sit on the new dark surface as-is; verified on device.
+  Two items used to live here and were deliberately removed:
+
+    android:windowBackground       Dead. android/ext/f.smali method t() installs
+                                   nexus_bg_dialog on the Window in code, and that
+                                   is the only path every GG dialog takes.
+    android:backgroundDimAmount    Dead. Left unset so the framework default (0.6)
+                                   applies; the smali path does not touch dim.
+
+  The rest of this style is still live: it supplies button metrics and colours,
+  and the content-button styling that dialogs inflate themselves rely on.
 -->
 <resources>
     <style name="NexusDialogButton" parent="@android:style/Widget.Material.Button.Borderless.Colored">
@@ -37,12 +45,10 @@
     </style>
 
     <style name="NexusDialog" parent="@android:style/Theme.Material.Dialog.Alert">
-        <item name="android:windowBackground">@drawable/nexus_bg_dialog</item>
         <item name="android:textColorPrimary">@color/nexus_text</item>
         <item name="android:textColorSecondary">@color/nexus_text2</item>
         <item name="android:textColorAlertDialogListItem">@color/nexus_text</item>
         <item name="android:colorAccent">@color/nexus_orange</item>
-        <item name="android:backgroundDimAmount">0.7</item>
         <item name="android:buttonStyle">@style/NexusDialogContentButton</item>
         <item name="android:buttonBarPositiveButtonStyle">@style/NexusDialogButton</item>
         <item name="android:buttonBarNegativeButtonStyle">@style/NexusDialogButton</item>

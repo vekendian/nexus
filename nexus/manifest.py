@@ -122,21 +122,3 @@ def rebrand(tree: Path) -> None:
     yml = tree / "apktool.yml"
     if yml.is_file():
         write(tree, "apktool.yml", set_yml_version(yml.read_text(encoding="utf-8")))
-
-
-def unrebrand(tree: Path) -> None:
-    replace_in_smali(tree, SMALI_NEW, SMALI_OLD)
-    for root in smali_roots(tree):
-        src = root / "org" / "vekendian" / "nexus"
-        if not src.is_dir():
-            continue
-        dst = root / "com" / "scmq"
-        if dst.exists():
-            raise PatchError(f"{dst} exists — cannot move rebranded smali back")
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(src), str(dst))
-        for d in [src.parent, src.parent.parent]:
-            try:
-                d.rmdir()  # prune org/vekendian if empty
-            except OSError:
-                pass

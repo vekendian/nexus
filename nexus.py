@@ -2,11 +2,10 @@
 """Nexus patcher entry point.
 
     nexus.py check  --src <tree>    verify anchors + IDs, read-only
-    nexus.py apply  --src <tree>    patch the tree (backed up first)
-    nexus.py revert --src <tree>    restore from the backup
+    nexus.py apply  --src <tree>    write a patched copy to <tree>_nexus_output
     nexus.py ids    --src <tree>    show the ID lock file and audit it
 
-Run `bash build.sh --src <tree>` afterwards to produce a signed APK.
+Run `bash build.sh --src <tree>_nexus_output` afterwards to produce a signed APK.
 
 Note: this file and the `nexus/` package share a name in the same directory.
 That is fine — running `python3 nexus.py` executes this file as __main__, so

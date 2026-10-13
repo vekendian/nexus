@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Dialog surface. Referenced by NexusDialog (see nexus_styles.xml), which
-     is wired into FixTheme via android:alertDialogTheme + android:dialogTheme
-     so every AlertDialog in the app picks it up without touching call sites. -->
+<!-- Dialog surface. NOT referenced from the theme any more: android/ext/f.smali
+     method t() installs this on the dialog Window in code, which is the only
+     path that every GameGuardian dialog actually takes (46 of 46 creation
+     sites funnel through android/ext/f). The theme item never reached the
+     button bar, and a code-set drawable keeps the corner radius density-aware.
+
+     No stroke: Material dark surfaces separate from the backdrop by tone, and
+     at the framework's default 0.6 dim the backdrop is far darker than the
+     surface, so an outline only adds a hard line Material does not have.
+     nexus_surface_dialog sits one step above nexus_surface to carry that
+     separation on its own. A hairline stroke is the cheapest fix if it ever
+     reads flat against a bright game. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="@color/nexus_surface" />
-    <stroke
-        android:width="1dp"
-        android:color="@color/nexus_divider" />
-    <corners android:radius="16dp" />
+    <solid android:color="@color/nexus_surface_dialog" />
+    <corners android:radius="28dp" />
 </shape>

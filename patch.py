@@ -5,7 +5,6 @@ Kept so `python3 patch.py check --src ...` keeps working.
 
     python3 nexus.py check  --src <tree>
     python3 nexus.py apply  --src <tree>
-    python3 nexus.py revert --src <tree>
     python3 nexus.py ids    --src <tree>
 """
 

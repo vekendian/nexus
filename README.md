@@ -28,8 +28,8 @@ card panels, a power card, an ENVIRONMENT readout, localised settings rows, a
 modern dialog theme, a restyled keyboard, and a rebrand to
 `org.vekendian.nexus` v1.0.0.
 
-Bring your own GG APK. The patcher makes no network calls and touches nothing
-outside the tree you point it at.
+Bring your own GG APK. The patcher makes no network calls and never
+modifies the tree you point it at.
 
 ---
 
@@ -42,21 +42,19 @@ apktool d -f -s --aapt /usr/bin/aapt2 gg-499.2.apk -o gg_src
 # 2. sanity-check the tree without modifying anything
 python3 nexus.py check --src gg_src
 
-# 3. patch (backs up first; safe to re-run after a revert)
+# 3. patch -> writes a patched COPY to gg_src_nexus_output (gg_src is untouched)
 python3 nexus.py apply --src gg_src
 
 # 4. build a signed APK
-bash build.sh --src gg_src --out nexus-1.0.0.apk
+bash build.sh --src gg_src_nexus_output --out nexus-1.0.0.apk
 
 # 5. install
 adb install -r nexus-1.0.0.apk
 ```
 
-To go back:
-
-```bash
-python3 nexus.py revert --src gg_src
-```
+To start over, delete `gg_src_nexus_output` (or re-run `apply` with `--force`).
+There is no revert: your original tree is never modified.
+Use `--out <dir>` to write somewhere else.
 
 ---
 
@@ -65,8 +63,7 @@ python3 nexus.py revert --src gg_src
 | Command | What it does | Exit codes |
 |---|---|---|
 | `check --src T` | Read-only. Runs **preflight** on an unpatched tree, **postflight** on a patched one. | 0 pass · 1 fail · 2 bad input |
-| `apply --src T` | Preflight, then patch. Refuses to touch the tree if preflight fails. | 0 ok · 1 abort · 2 bad input |
-| `revert --src T` | Restores every file from `.nexus_backup/`, removes copied resources, then **verifies** nothing was left patched. | 0 ok · 1 nothing to do / incomplete · 2 bad input |
+| `apply --src T [--out D] [--force]` | Preflight, then clone `T` to `T_nexus_output` (or `D`) and patch the clone. `T` is never modified. | 0 ok · 1 abort · 2 bad input |
 | `ids --src T` | Prints the ID lock file, resolves every GameGuardian binding against the tree, and reports drift. | 0 ok · 1 collision or missing binding |
 
 ## Why it fails loudly
@@ -132,7 +129,7 @@ nexus/
   layout.py           main.xml blocks: navbar, panels, ENVIRONMENT cards
   manifest.py         rebrand: package, label, version
   checks.py           preflight / postflight / ID audit
-  tree.py             resolve_tree, backup, revert, read/write
+  tree.py             resolve_tree, output clone, read/write
 nexus_ids.json        pinned IDs + observed GG bindings
 resources/res/        static drawables, values, icons
 tests/                pytest suite + fixtures
@@ -183,11 +180,8 @@ be rejected by `pm install -r`.
 
 - **Run `build.sh` with `bash`.** Android shared storage cannot set the exec
   bit, so `./build.sh` fails with a permission error.
-- **`revert` restores only what `apply` touched.** If you hand-edit layouts,
-  `revert` will not know about them. `revert` does scan for leftover Nexus
-  markers afterwards and warns if it finds any.
-- **Keep a pristine copy of your tree.** `.nexus_backup` is removed by a
-  successful `revert`, and it is the only copy of the originals.
+- **`apply` won't overwrite an existing output folder** unless you pass
+  `--force`, and `--force` only deletes folders that look like an apktool tree.
 - **`MainService$m.smali` must keep the old download URL.** It uses that literal
   as `charAt(11) - 0x6a` to derive an array index, not as a URL. Rewriting it
   silently retargets a service-list button. `check` asserts this stays untouched.

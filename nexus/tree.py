@@ -1,4 +1,4 @@
-"""Locating, reading, writing, backing up and reverting an apktool tree."""
+"""Locating, reading, writing and cloning an apktool tree."""
 
 from __future__ import annotations
 
@@ -12,30 +12,12 @@ from .anchors import PatchError
 PATCHER_DIR = Path(__file__).resolve().parent.parent
 RES_DIR = PATCHER_DIR / "resources"
 LOCK_PATH = PATCHER_DIR / "nexus_ids.json"
-BACKUP_DIR = ".nexus_backup"
+OUTPUT_SUFFIX = "_nexus_output"
 
 # Overridable so the tool is not welded to one machine's paths. apktool defaults
 # to whatever is on PATH; set NEXUS_APKTOOL=<jar> to pin a specific build.
 APKTOOL = os.environ.get("NEXUS_APKTOOL", "apktool")
 AAPT = os.environ.get("NEXUS_AAPT", "aapt2")
-
-# Files this patcher rewrites. revert() restores exactly this set, then removes
-# the resources it copied. Anything outside this list is untouched.
-MODIFIED_FILES = [
-    "res/layout/main.xml",
-    "res/values/public.xml",
-    "res/values/styles.xml",
-    "smali/android/ext/r.smali",
-    "AndroidManifest.xml",
-    "res/values/strings.xml",
-    "apktool.yml",
-    # download-URL rewrite (see smali.nexus_encode_url) — restored on revert
-    "smali/android/ext/r$n.smali",
-    "smali/android/ext/ShowApp.smali",
-    # keyboard restyle
-    "res/layout/keyboard.xml",
-    "res/drawable/btn_keyboard_key_lxx_dark.xml",
-]
 
 ICON_BUCKETS = {
     "drawable": {"ldpi-v21": 36, "mdpi-v21": 48, "v21": 48, "hdpi-v21": 72,
@@ -106,28 +88,35 @@ def detect_version(tree: Path) -> str:
     return "unknown"
 
 
-def backup(tree: Path) -> None:
-    bdir = tree / BACKUP_DIR
-    bdir.mkdir(exist_ok=True)
-    for rel in MODIFIED_FILES:
-        dst = bdir / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        if not dst.exists():  # keep the first (original) backup
-            shutil.copy2(tree / rel, dst)
-
-
 def copy_resources(tree: Path) -> None:
     shutil.copytree(RES_DIR / "res", tree / "res", dirs_exist_ok=True)
 
 
-def restore_backup(tree: Path) -> None:
-    bdir = tree / BACKUP_DIR
-    for rel in MODIFIED_FILES:
-        src = bdir / rel
-        if not src.is_file():
-            raise PatchError(f"backup missing for {rel} — cannot revert cleanly")
-    for rel in MODIFIED_FILES:
-        shutil.copy2(bdir / rel, tree / rel)
+def default_output(tree: Path) -> Path:
+    """``<parent>/<treeName>_nexus_output``, a sibling of the source tree."""
+    return tree.with_name(tree.name + OUTPUT_SUFFIX)
+
+
+def make_output(tree: Path, out: Path, force: bool = False) -> None:
+    """Clone ``tree`` into ``out`` so the patcher never touches the source.
+
+    Refuses anything that could clobber the source: ``out`` equal to, inside,
+    or containing ``tree``. An existing ``out`` is only replaced with
+    ``force`` and only if it looks like an apktool tree (so a typo in --out
+    cannot rmtree an arbitrary directory).
+    """
+    tree, out = tree.resolve(), out.resolve()
+    if out == tree or tree in out.parents or out in tree.parents:
+        raise PatchError(f"output {out} overlaps the source tree {tree}")
+    if out.exists():
+        if not force:
+            raise PatchError(f"{out} already exists (use --force to replace it)")
+        if not out.is_dir() or not any((out / n).is_file()
+                                       for n in ("apktool.yml", "apktool.json")):
+            raise PatchError(f"{out} exists and is not an apktool tree; refusing to delete it")
+        shutil.rmtree(out)
+    shutil.copytree(tree, out, symlinks=True)
+
 
 # ---------------------------------------------------------------- helpers ---
 

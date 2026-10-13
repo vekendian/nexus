@@ -2,6 +2,7 @@
 <resources>
     <color name="nexus_bg">#141416</color>
     <color name="nexus_surface">#1F1F22</color>
+    <color name="nexus_surface_dialog">#232329</color>
     <color name="nexus_surface_high">#2A2A2E</color>
     <color name="nexus_surface_alt">#34343A</color>
     <color name="nexus_divider">#2E2E33</color>

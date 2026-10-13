@@ -62,7 +62,7 @@ def preflight(tree: Path, ids: Ids) -> list:
     nexus_styles = nexus_styles.read_text(encoding="utf-8") if nexus_styles.is_file() else ""
 
     if MARKER in smali:
-        errors.append("already patched (marker %r in r.smali) — run 'revert' first" % MARKER)
+        errors.append("already patched (marker %r in r.smali) — point --src at the original, unpatched tree" % MARKER)
 
     for cid in CONTRACT_IDS:
         if f'<public type="id" name="{cid}"' not in public:

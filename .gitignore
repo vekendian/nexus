@@ -13,8 +13,8 @@ venv/
 build/
 dist/
 
-# Local patcher state (lives in a GG tree, not here, but just in case)
-.nexus_backup/
+# Patched copies written next to the source tree
+*_nexus_output/
 
 # Editors / OS
 .idea/
