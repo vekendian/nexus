@@ -50,6 +50,7 @@ TEMPLATES = (
     "NexusLua$Extensions$Jfn.smali",
     "NexusLua$Perm.smali",
     "NexusLua$Perm$Ask.smali",
+    "NexusLua$Require.smali",
 )
 # The v1 surface, and nothing else: stopAll was dropped on purpose (it would
 # silently kill every module, including ones the user started themselves), and
@@ -57,7 +58,7 @@ TEMPLATES = (
 # so scripts have nothing to run or stop explicitly. import() is the exception
 # in one way -- its capability is "extensions.import" for the builder and every
 # function object it hands out, because importing, inspecting and calling one
-# extension are one action.
+# extension are one action. require() is the same as import() with a shorter name.
 OPS = ("extensions.install", "extensions.uninstall", "extensions.list")
 TABLE_KEYS = ("install", "uninstall", "list", "import")
 

@@ -81,8 +81,15 @@ final class JarExtensionLoader {
         if (!f.isFile()) {
             return fail(rec, "file is gone");
         }
-        if (!isJar(f)) {
-            return fail(rec, "not a valid .jar file");
+        // Validate by type: JAR needs ZIP magic, DEX needs dex magic
+        if (rec.type == ExtensionType.DEX) {
+            if (!isDex(f)) {
+                return fail(rec, "not a valid .dex file");
+            }
+        } else {
+            if (!isJar(f)) {
+                return fail(rec, "not a valid .jar file");
+            }
         }
         try {
             // Parent is the shared-library chain when dependencies are loaded,
@@ -130,8 +137,7 @@ final class JarExtensionLoader {
                 rec.description = "";
             }
 
-            // JAR extensions don't have run() - they are libraries
-            rec.type = ExtensionType.JAR;
+            // JAR/DEX extensions don't have run() - they are libraries
             rec.exported = true;
             // The same loader is what dependents (dependsOn) and LuaJava see.
             rec.sharedLoader = rec.loader;
@@ -177,6 +183,31 @@ final class JarExtensionLoader {
             return "cannot read @ExtensionManifest annotation";
         }
         return "missing @ExtensionManifest annotation";
+    }
+
+    /** Checks that {@code f} is a Dalvik-dex file (starts with the dex magic). */
+    static boolean isDex(File f) {
+        if (f == null || !f.isFile() || f.length() < 4) {
+            return false;
+        }
+        FileInputStream in = null;
+        try {
+            in = new FileInputStream(f);
+            byte[] magic = new byte[4];
+            int n = 0;
+            while (n < magic.length) {
+                int r = in.read(magic, n, magic.length - n);
+                if (r <= 0) {
+                    return false;
+                }
+                n += r;
+            }
+            return magic[0] == 'd' && magic[1] == 'e' && magic[2] == 'x' && magic[3] == '\n';
+        } catch (Throwable t) {
+            return false;
+        } finally {
+            ExtensionStore.closeQuietly(in);
+        }
     }
 
     /** Drops a half-built loader so a rejected extension does not leak it. */
