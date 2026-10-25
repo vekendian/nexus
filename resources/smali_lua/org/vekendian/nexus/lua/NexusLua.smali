@@ -21,7 +21,7 @@
 #
 # Registers: p0 = script path (File#toString or String, may be null),
 # p1 = the script environment. .locals 4 -> v0 nexus table, v1 key,
-# v2/v3 the wide version number.
+# v2 the version string.
 
 
 .method public static install(Ljava/lang/String;Lluaj/LuaValue;)V
@@ -35,9 +35,9 @@
 
     const-string v1, "version"
 
-    const-wide v2, 0x3ff0000000000000L
+    const-string v2, "1.0.0"
 
-    invoke-static {v2, v3}, Lluaj/LuaDouble;->J2(D)Lluaj/LuaNumber;
+    invoke-static {v2}, Lluaj/LuaValue;->valueOf(Ljava/lang/String;)Lluaj/LuaValue;
 
     move-result-object v2
 
