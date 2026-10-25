@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The surface behind a Nexus toast.
+
+  Ported from the reference app (nexus_ref/res/drawable/nexus_bg_toast.xml),
+  which had it and the patcher did not. A stock Android toast is a white
+  rounded rectangle with the platform's own typography, which is the one
+  thing in the app that still looks like another app.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/nexus_surface_high"/>
+    <stroke android:width="1dp" android:color="@color/nexus_surface_alt"/>
+    <corners android:radius="26dp"/>
+</shape>

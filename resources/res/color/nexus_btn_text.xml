@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Label of the global button, paired with nexus_bg_button.
+
+     The pill is the accent everywhere, so its label is the app's white text;
+     the disabled pill pairs with the secondary grey, the same pair every
+     other off-state control uses. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false" android:color="@color/nexus_text2" />
+    <item android:color="@color/nexus_text" />
+</selector>

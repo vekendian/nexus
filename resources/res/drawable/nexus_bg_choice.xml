@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Choice button used by the permissions screen.
+
+     Selected side is filled with Nexus orange; inactive side is surface alt.
+     One drawable, one state: selected = active (orange), not selected = grey.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/nexus_surface_alt" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/nexus_orange" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/nexus_surface_high" />
+            <stroke android:width="1dp" android:color="@color/nexus_orange" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/nexus_surface_alt" />
+            <stroke android:width="1dp" android:color="@color/nexus_divider" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+</selector>

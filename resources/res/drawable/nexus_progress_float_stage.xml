@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The float's stage bar: the same rounded bar, in the dimmer tone, for the
+  stage behind the scan's own progress.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background"
+        android:drawable="@drawable/nexus_bg_track" />
+    <item android:id="@android:id/progress">
+        <clip
+            android:drawable="@drawable/nexus_bg_fill_dim"
+            android:gravity="left" />
+    </item>
+</layer-list>

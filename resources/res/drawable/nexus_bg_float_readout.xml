@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The readout that covers the float's icon while a scan runs.
+
+  GameGuardian paints a flat 50% black rectangle over the icon, square
+  corners and all. This is a dense disc the same shape as the icon it
+  covers, so the scan state reads as the icon showing its progress rather
+  than as a box taped over it.
+
+  The fill is denser than the float's other surfaces: this is the one thing
+  that has to stay readable over a bright game frame.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/nexus_float_readout" />
+</shape>

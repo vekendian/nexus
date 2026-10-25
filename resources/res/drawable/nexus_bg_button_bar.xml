@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The alert bar's three buttons are created in code with equal weights, so
+     they stretch until the pills touch. Style-level layout margins are ignored
+     on these programmatically created buttons; the gap has to come from the
+     drawable, hence this inset wrapper around the global pill. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/nexus_bg_button"
+    android:insetLeft="3dp"
+    android:insetRight="3dp" />

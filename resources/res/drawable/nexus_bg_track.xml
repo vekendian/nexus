@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The track behind a progress bar: 3dp rounded, so a bar reads as a bar and
+  not as a rectangle. Ported from the reference app.
+
+  The fill that rides on it is nexus_bg_fill.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/nexus_surface_alt"/>
+    <corners android:radius="3dp"/>
+</shape>

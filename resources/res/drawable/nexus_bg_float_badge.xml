@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The badge behind the float's speed readout and the time-jump panel.
+
+  GameGuardian paints these with txt_bg, a purple glow 9-patch. Purple is the
+  one colour in the app that is not in the Nexus palette, and a glow reads as
+  an artifact over a game screen rather than as a label. This is a flat dark
+  surface with a hairline edge instead.
+
+  The edge is a light hairline rather than an orange one: the float already
+  carries the accent in its bars and its icon, and an orange outline on every
+  piece of chrome turns the whole overlay into an orange blob.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/nexus_float_badge" />
+    <stroke android:width="1dp" android:color="@color/nexus_float_badge_edge" />
+    <corners android:radius="16dp" />
+</shape>

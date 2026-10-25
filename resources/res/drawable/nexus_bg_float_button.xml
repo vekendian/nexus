@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The float's speed buttons.
+
+  GameGuardian draws these as bare white arrows with no surface behind them,
+  so over a bright game they are white on white: two controls the user cannot
+  see. This is a round surface with a hairline edge and a Nexus ripple, and
+  the arrow sits inside it.
+
+  A circle, not a rounded square: the float's icon is a disc, and the two
+  controls that flank it are the same shape.
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#26FFFFFF">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/nexus_float_badge" />
+            <stroke android:width="1dp" android:color="@color/nexus_float_badge_edge" />
+        </shape>
+    </item>
+    <item android:id="@android:id/mask">
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFF" />
+        </shape>
+    </item>
+</ripple>

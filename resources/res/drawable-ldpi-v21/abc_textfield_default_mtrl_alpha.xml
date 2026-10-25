@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nexus-styled text field background.
+  
+  Replaces Material's abc_textfield_default_mtrl_alpha.9.png (purple).
+  Rounded rectangle with surface fill, divider stroke, and orange focus ring.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/nexus_surface" />
+            <stroke android:width="2dp" android:color="@color/nexus_orange" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/nexus_surface_high" />
+            <stroke android:width="1dp" android:color="@color/nexus_divider" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/nexus_surface" />
+            <stroke android:width="1dp" android:color="@color/nexus_divider" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+</selector>

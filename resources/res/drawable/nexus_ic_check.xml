@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The check that marks the option in effect in the permissions dialog.
+  
+  White ink, because it sits on the orange fill of the selected side.
+  The glyph is a second channel for the same state the fill already carries:
+  the state must not be readable from colour alone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp" android:height="16dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path
+        android:fillColor="@color/nexus_text"
+        android:pathData="M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41,-1.41z" />
+</vector>

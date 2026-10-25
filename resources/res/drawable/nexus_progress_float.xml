@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The float's scan bar: a rounded track with a rounded fill clipped to it.
+
+  The platform's horizontal bar is a square-ended rectangle. The fill is
+  clipped rather than scaled, so it keeps its radius as it grows, and the
+  bar's height is set at runtime by GameGuardian to 14/48 of the icon's
+  size, which is why the radius is small enough to look right at every size
+  the float can be set to.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background"
+        android:drawable="@drawable/nexus_bg_track" />
+    <item android:id="@android:id/progress">
+        <clip
+            android:drawable="@drawable/nexus_bg_fill"
+            android:gravity="left" />
+    </item>
+</layer-list>

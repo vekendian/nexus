@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Text paired with nexus_bg_choice.
+
+     One rule: orange means "this side is in effect". Nothing else wears it.
+     The active option fills with orange and carries white text; the inactive
+     option wears surface color with white text. The background colour alone
+     makes the active option unmistakable. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_selected="true"
+        android:color="@color/nexus_text" />
+    <item android:color="@color/nexus_text" />
+</selector>
