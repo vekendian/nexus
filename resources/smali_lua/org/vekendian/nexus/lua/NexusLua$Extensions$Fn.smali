@@ -70,17 +70,32 @@
     return-object v0
 
     :allowed
-    sget-object v0, Lluaj/LuaValue;->c:Lluaj/LuaValue;
+    # arg[1] may be absent (list() takes no path). Only read it when present;
+    # otherwise pass an empty string -- the LuaBridge.list handler ignores it.
+    invoke-virtual {p1}, Lluaj/Varargs;->narg()I
 
-    const/4 v1, 0x1
+    move-result v0
 
-    invoke-virtual {p1, v1, v0}, Lluaj/Varargs;->d0(ILluaj/LuaValue;)Lluaj/LuaValue;
+    if-lez v0, :fn_no_arg
+
+    sget-object v1, Lluaj/LuaValue;->c:Lluaj/LuaValue;
+
+    const/4 v2, 0x1
+
+    invoke-virtual {p1, v2, v1}, Lluaj/Varargs;->d0(ILluaj/LuaValue;)Lluaj/LuaValue;
 
     move-result-object v0
 
     invoke-virtual {v0}, Lluaj/LuaValue;->B0()Ljava/lang/String;
 
     move-result-object v0
+
+    goto :fn_got_arg
+
+    :fn_no_arg
+    const-string v0, ""
+
+    :fn_got_arg
 
     iget-object v1, p0, Lorg/vekendian/nexus/lua/NexusLua$Extensions$Fn;->script:Ljava/lang/String;
 

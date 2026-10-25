@@ -45,14 +45,6 @@
 
     invoke-static {p0, v0, p1}, Lorg/vekendian/nexus/lua/NexusLua$Extensions;->install(Ljava/lang/String;Lluaj/LuaValue;Lluaj/LuaValue;)V
 
-    const-string v1, "require"
-
-    new-instance v2, Lorg/vekendian/nexus/lua/NexusLua$Require;
-
-    invoke-direct {v2, p0, p2}, Lorg/vekendian/nexus/lua/NexusLua$Require;-><init>(Ljava/lang/String;Lluaj/LuaValue;)V
-
-    invoke-virtual {v0, v1, v2}, Lluaj/LuaValue;->i2(Ljava/lang/String;Lluaj/LuaValue;)V
-
     const-string v1, "nexus"
 
     invoke-virtual {p1, v1, v0}, Lluaj/LuaValue;->i2(Ljava/lang/String;Lluaj/LuaValue;)V
