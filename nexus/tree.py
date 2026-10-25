@@ -56,7 +56,20 @@ def resolve_tree(src: str) -> Path:
 
 
 def read(tree: Path, rel: str) -> str:
-    return (tree / rel).read_text(encoding="utf-8")
+    """Read a file from the tree, or "" when it is not there.
+
+    A missing file is a finding, not a crash: the checks that call this are
+    there to report what is wrong with a tree, and dying on a traceback
+    hides every other finding behind the first one. An empty string makes
+    the anchor counts fail, which is the report.
+    """
+    path = tree / rel
+    if not path.is_file():
+        return ""
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
 
 
 def write(tree: Path, rel: str, text: str) -> None:
@@ -94,25 +107,35 @@ def detect_version(tree: Path) -> str:
     return "unknown"
 
 
-def copy_resources(tree: Path) -> list:
-    """Copy Nexus' res/ and smali/ payload into the tree.
-
-    resources/res is the ordinary res overlay. resources/smali holds whole
-    hand-written smali classes (currently only the module card's click
-    listener) that have no XML form; they are copied into the smali roots
-    verbatim so baksmali/apktool assembles them like any other class.
-    """
-    copied = []
+def copy_resources(tree: Path) -> None:
     shutil.copytree(RES_DIR / "res", tree / "res", dirs_exist_ok=True)
-    smali_src = RES_DIR / "smali"
-    if smali_src.is_dir():
-        # Only the primary root. GG is single-dex, but copying the same class
-        # into every root would be a duplicate-definition build error the moment
-        # GG ships more than one.
-        dest = tree / "smali"
-        shutil.copytree(smali_src, dest, dirs_exist_ok=True)
-        copied.append("smali")
-    return copied
+
+
+def copy_smali(tree: Path) -> None:
+    """Copy the hand-written smali classes in resources/smali into the tree.
+
+    Must run AFTER rebrand(). These classes live in the rebranded namespace
+    (org/vekendian/nexus/...), which is exactly the directory rebrand() creates
+    by moving com/scmq. Copying them first would make rebrand() refuse with
+    "already exists -- tree may be rebranded", because it cannot tell our
+    classes apart from GG's.
+
+    Only the primary root: GG is single-dex, and copying the same class into
+    every root would be a duplicate-definition build error the moment it ships
+    more than one.
+    """
+    src = RES_DIR / "smali"
+    if not src.is_dir():
+        return
+    shutil.copytree(src, tree / "smali", dirs_exist_ok=True)
+    # The init probe is a diagnostic, not a feature: it deliberately calls
+    # findViewById on an id it expects to be ABSENT, so shipping it would trip
+    # the reachability audit and add a class nothing can reach. Only present
+    # when NEXUS_DIAG=1 asked for it.
+    if not diag_enabled():
+        stale = tree / "smali" / "org" / "vekendian" / "nexus" / "Diag.smali"
+        if stale.is_file():
+            stale.unlink()
 
 
 def default_output(tree: Path) -> Path:
@@ -185,3 +208,25 @@ def ensure_apktool_yml(tree: Path) -> None:
         "",
     ]
     yml.write_text("\n".join(lines), encoding="utf-8")
+
+
+def diag_enabled() -> bool:
+    """``NEXUS_DIAG=1`` ships the MainService init probe. Off by default."""
+    return os.environ.get("NEXUS_DIAG", "0") == "1"
+
+
+def ui_enabled() -> bool:
+    """``NEXUS_UI=0`` applies the rebrand and nothing else.
+
+    No main.xml rewrite, no FixTheme change, no r.smali injection, no service
+    config or ConfigListAdapter edits, no keyboard work, no URL rewrite. The
+    Nexus resources and public.xml entries still land, so ids stay consistent.
+
+    This is the one bisect axis that has never been run. Every transform skipped
+    here edits a file GG owns; a build without them answers "is the crash in the
+    UI injection at all", which the engine-stubbed build could not -- that one
+    only stopped NexusHost.boot() from running while leaving the whole UI in
+    place. Lives here because tree.py is the lowest module in the package and
+    both cli.py and checks.py need it without importing each other.
+    """
+    return os.environ.get("NEXUS_UI", "1") != "0"

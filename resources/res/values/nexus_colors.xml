@@ -2,7 +2,6 @@
 <resources>
     <color name="nexus_bg">#141416</color>
     <color name="nexus_surface">#1F1F22</color>
-    <color name="nexus_surface_dialog">#232329</color>
     <color name="nexus_surface_high">#2A2A2E</color>
     <color name="nexus_surface_alt">#34343A</color>
     <color name="nexus_divider">#2E2E33</color>
@@ -10,8 +9,19 @@
     <color name="nexus_on_orange">#1A1A1C</color>
     <color name="nexus_on_container">#FFE3CC</color>
     <color name="nexus_indicator">#5C3A1E</color>
+    <color name="nexus_ring_on">#9A5A2B</color>
     <color name="nexus_text">#FFFFFF</color>
     <color name="nexus_text2">#A8A8B0</color>
+    <color name="nexus_scrim">#C0000000</color>
     <color name="nexus_ok">#4ADE80</color>
     <color name="nexus_bad">#FF5C5C</color>
+
+    <!-- Floating interface. The float sits over a game screen, not over the
+         Nexus background, so it carries its own contrast: an almost-opaque
+         dark surface for everything it draws, and a hairline edge that reads
+         over both a dark game and a bright one. -->
+    <color name="nexus_float_badge">#F21F1F22</color>
+    <color name="nexus_float_badge_edge">#40FFFFFF</color>
+    <color name="nexus_float_readout">#FA141416</color>
+    <color name="nexus_orange_dim">#FFB366</color>
 </resources>

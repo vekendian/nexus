@@ -28,6 +28,11 @@ from .anchors import PatchError
 
 LOCK_NAME = "nexus_ids.json"
 
+# Resource kinds Nexus pins. "raw" is the Dex Executor's .dex asset: it has to be
+# pinned like any other id because the host reads it by number, and a raw id
+# assigned by apktool would shift whenever GG's own res/raw contents change.
+KINDS = ("id", "drawable", "layout", "string", "raw")
+
 _PUBLIC_RE = re.compile(
     r'<public\s+type="(?P<type>\w+)"\s+name="(?P<name>[\w.]+)"\s+id="(?P<id>0x[0-9a-fA-F]+)"'
 )
@@ -64,7 +69,7 @@ class Ids:
 
     # -- Nexus (pinned) lookups -------------------------------------------
     def _pinned(self, name: str) -> int:
-        for kind in ("id", "drawable", "layout", "string"):
+        for kind in KINDS:
             table = self.nexus.get(kind, {})
             if name in table:
                 return int(table[name], 16)
@@ -84,7 +89,7 @@ class Ids:
     def pinned_table(self) -> list:
         """``[(type, name, hex)]`` in the order public.xml lines must be emitted."""
         rows = []
-        for kind in ("id", "drawable", "layout", "string"):
+        for kind in KINDS:
             for name, hexval in self.nexus.get(kind, {}).items():
                 rows.append((kind, name, hexval))
         return rows

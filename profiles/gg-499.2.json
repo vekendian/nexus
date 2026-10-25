@@ -1,0 +1,70 @@
+{
+  "profile_version": 1,
+  "gg_release": "499.2",
+  "comment": [
+    "What GameGuardian 499.2 looks like. Everything a release decides for",
+    "itself is here: where its files are, what its views are called, how many",
+    "of something it has. Everything Nexus decides is in the transforms.",
+    "",
+    "To port Nexus to a new GameGuardian release, copy this file to",
+    "gg-<version>.json and correct what changed. A release that renumbered",
+    "its views needs no change at all: the ids are resolved by name from the",
+    "tree's public.xml at apply time.",
+    "",
+    "The anchors themselves are matched by STRUCTURE, not by the literal text",
+    "that carries GameGuardian's numbers, so a release that renumbers does",
+    "not break the patch."
+  ],
+  "package": "com.scmq",
+  "app_name": "GameGuardian",
+  "files": {
+    "main_activity": "smali/android/ext/r.smali",
+    "dialog_helper": "smali/android/ext/f.smali",
+    "config_adapter": "smali/android/ext/ConfigListAdapter.smali",
+    "main_service": "smali/android/ext/MainService.smali",
+    "script": "smali/android/ext/Script.smali",
+    "execute_dialog": "smali/android/ext/o0$b.smali",
+    "row_tints": [
+      "smali/android/ext/b3.smali",
+      "smali/android/ext/y0$b.smali"
+    ],
+    "url_sites": [
+      "smali/android/ext/r$n.smali",
+      "smali/android/ext/ShowApp.smali"
+    ]
+  },
+  "layouts": {
+    "main": "res/layout/main.xml",
+    "service_config": "res/layout/service_config.xml",
+    "hot_point_view": "res/layout/hot_point_view.xml",
+    "time_jump_panel": "res/layout/time_jump_panel.xml",
+    "keyboard": "res/layout/keyboard.xml",
+    "keyboard_selector": "res/drawable/btn_keyboard_key_lxx_dark.xml",
+    "service_searcher": "res/layout/service_searcher.xml",
+    "service_dialog": "res/layout/service_dialog.xml"
+  },
+  "counts": {
+    "separator_bands": 5,
+    "button_rows": 2,
+    "label_game": 2,
+    "launcher_categories": 2,
+    "leanback_categories": 2,
+    "gg_ids": 6
+  },
+  "icons": {
+    "buckets": {
+      "drawable": ["ldpi-v21", "mdpi-v21", "v21", "hdpi-v21", "xhdpi-v21",
+                   "xxhdpi-v21", "xxxhdpi-v21"],
+      "mipmap": ["ldpi-v21", "mdpi-v21", "v21", "hdpi-v21", "xhdpi-v21",
+                 "xxhdpi-v21", "xxxhdpi-v21"]
+    },
+    "names": {
+      "drawable": ["ic_gg_48dp.png"],
+      "mipmap": ["ic_sw_48dp.png", "ic_hw_48dp.png"]
+    }
+  },
+  "url": {
+    "plain": "http://gameguardian.net/download",
+    "caesar_shift": 3
+  }
+}

@@ -9,20 +9,30 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sys
 from pathlib import Path
 
 from .anchors import PatchError, replace_once
-from .checks import is_patched, postflight, preflight
-from .ids import Ids
-from .layout import transform_main, transform_service_config
+from .checks import delta_audits_skipped, is_patched, postflight, preflight
+from .ids import KINDS, Ids
+from .layout import (GG_SURFACE_LAYOUTS, transform_dialog_empty_state,
+                     transform_gg_surface, transform_hot_point,
+                     transform_main, transform_searcher_space,
+                     transform_service_config, transform_styles,
+                     transform_time_jump)
+from .luapatch import apply as apply_lua
 from .manifest import NEW_VERSION_NAME, rebrand
+from .profile import Profile, gg_version_from_tree
 from .smali import (CONFIG_ADAPTER, DOWNLOAD_URL_NEW, DOWNLOAD_URL_OLD,
-                    KBD_LAYOUT_ANCHOR, KBD_LAYOUT_NEW, KBD_SELECTOR_NEW,
-                    transform_dialogs, transform_settings_highlight,
-                    transform_smali)
-from .tree import (LOCK_PATH, copy_resources, default_output, detect_version,
+                    KBD_GRAVITY_ANCHOR, KBD_GRAVITY_NEW, KBD_LAYOUT_ANCHOR,
+                    KBD_LAYOUT_NEW, KBD_SELECTOR_NEW,
+                    ROW_TINT_FILES, transform_config_adapter, transform_dialogs,
+                    transform_dialog_builder, transform_empty_views,
+                    transform_row_tints,
+                    transform_settings_highlight, transform_smali)
+from .tree import (LOCK_PATH, OUTPUT_SUFFIX, copy_resources, copy_smali, default_output, detect_version, ui_enabled,
                    ensure_apktool_yml, make_output, read, resolve_tree, write)
 
 TRACK = "smali/android/ext/r.smali"
@@ -49,27 +59,17 @@ def transform_public(public: str, ids: Ids) -> str:
     return public.replace("</resources>", ids.public_id_lines() + "\n</resources>")
 
 
-def transform_styles(styles: str) -> str:
-    return replace_once(styles,
-                        '        <item name="android:windowActionBar">false</item>',
-                        '''        <item name="android:windowActionBar">false</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowBackground">@color/nexus_bg</item>
-        <item name="android:statusBarColor">@color/nexus_bg</item>
-        <item name="android:navigationBarColor">@color/nexus_surface</item>
-        <item name="android:alertDialogTheme">@style/NexusDialog</item>
-        <item name="android:dialogTheme">@style/NexusDialog</item>
-        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>''',
-                        "styles windowActionBar")
-
-
 def transform_keyboard_layout(layout: str) -> str:
-    return replace_once(layout, KBD_LAYOUT_ANCHOR, KBD_LAYOUT_NEW, "keyboard background")
+    layout = replace_once(layout, KBD_LAYOUT_ANCHOR, KBD_LAYOUT_NEW,
+                          "keyboard background")
+    return replace_once(layout, KBD_GRAVITY_ANCHOR, KBD_GRAVITY_NEW,
+                        "keyboard centering")
 
 
 def transform_kbd_selector(xml: str) -> str:
     """Swap GG's 10-item key selector (six 9-patch PNGs per density) for the
-    two-state Nexus one."""
+    pressed-only Nexus one: resting keys paint nothing, so the dialog surface
+    behind the keyboard becomes the keys' background."""
     start, end = xml.find("<selector"), xml.find("</selector>")
     if start == -1 or end == -1:
         raise PatchError("keyboard selector <selector> not found")
@@ -82,8 +82,9 @@ def cmd_apply(args) -> int:
     try:
         src = resolve_tree(args.src)
         ids = _load_ids(src)
+        profile = Profile.for_release(detect_version(src), getattr(args, 'profile', None))
         out = Path(args.out).expanduser().resolve() if args.out else default_output(src)
-        errors = preflight(src, ids)
+        errors = preflight(src, ids, Profile.for_release(detect_version(src)))
     except (PatchError, OSError) as e:
         print(f"FAIL: {e}", file=sys.stderr)
         return 2
@@ -99,13 +100,13 @@ def cmd_apply(args) -> int:
         print(f"FAIL: {e}", file=sys.stderr)
         return 2
     try:
-        _patch(out, ids)
+        _patch(out, ids, profile)
     except (PatchError, OSError) as e:
         shutil.rmtree(out, ignore_errors=True)
         print(f"APPLY ABORTED: {e}", file=sys.stderr)
         print(f"Partial output removed; {src} was not touched.", file=sys.stderr)
         return 1
-    post = postflight(out, ids)
+    post = postflight(out, ids, src)
     if post:
         print(f"POSTFLIGHT FAILED (output kept for inspection: {out}):")
         for e in post:
@@ -118,43 +119,106 @@ def cmd_apply(args) -> int:
     return 0
 
 
-def _patch(tree: Path, ids: Ids) -> None:
+def _patch(tree: Path, ids: Ids, profile) -> None:
     """Apply every edit to ``tree`` (always the output copy, never the source)."""
     ensure_apktool_yml(tree)
     copy_resources(tree)
     write(tree, "res/values/public.xml",
           transform_public(read(tree, "res/values/public.xml"), ids))
+    if not ui_enabled():
+        # Everything below edits a file GG owns. Skipping all of it leaves a
+        # rebranded GG that still has its own UI, which is the only build that
+        # can separate "the UI injection" from "everything else".
+        rebrand(tree)
+        copy_smali(tree)
+        return
     write(tree, "res/values/styles.xml",
           transform_styles(read(tree, "res/values/styles.xml")))
-    write(tree, "res/layout/main.xml",
-          transform_main(read(tree, "res/layout/main.xml"), NEW_VERSION_NAME))
-    write(tree, TRACK, transform_smali(read(tree, TRACK), ids))
+    write(tree, profile.layout("main"),
+          transform_main(read(tree, profile.layout("main")), NEW_VERSION_NAME))
+    write(tree, profile.file("main_activity"),
+          transform_smali(read(tree, profile.file("main_activity")), ids))
     # Dialog chrome. android/ext/f.smali method t() is the one funnel every
     # GG dialog reaches, so this is a single edit rather than a theme item.
-    write(tree, DIALOG_FILE, transform_dialogs(read(tree, DIALOG_FILE), ids))
+    dh = read(tree, profile.file("dialog_helper"))
+    dh = transform_dialogs(dh, ids)
+    dh = transform_dialog_builder(dh)
+    write(tree, profile.file("dialog_helper"), dh)
     # Settings screen: orange section bands, no donate row, and the "this
     # setting is on" highlight retinted from GG's yellow to Nexus orange.
-    write(tree, "res/layout/service_config.xml",
-          transform_service_config(read(tree, "res/layout/service_config.xml")))
-    write(tree, CONFIG_ADAPTER,
-          transform_settings_highlight(read(tree, CONFIG_ADAPTER)))
+    write(tree, profile.layout("service_config"),
+          transform_service_config(
+              read(tree, profile.layout("service_config")),
+              profile.count("separator_bands")))
+    # Floating interface: the icon and the time-jump panel that sit over a
+    # game screen. GG's own layouts, restyled in place.
+    write(tree, profile.layout("hot_point_view"),
+          transform_hot_point(read(tree, profile.layout("hot_point_view"))))
+    write(tree, profile.layout("time_jump_panel"),
+          transform_time_jump(read(tree, profile.layout("time_jump_panel"))))
+    # The search and value-changed dialogs' spacing pass. The surface recolour
+    # below this only carries colours, so the two passes never undo each other.
+    write(tree, profile.layout("service_searcher"),
+          transform_searcher_space(read(tree, profile.layout("service_searcher"))))
+    config_adapter = transform_settings_highlight(read(tree, profile.file("config_adapter")))
+    config_adapter = transform_config_adapter(config_adapter, ids)
+    write(tree, profile.file("config_adapter"), config_adapter)
+    # The same "this row is marked" tint, in the two places that mark rows
+    # outside the settings list.
+    for rel in profile.files_list("row_tints"):
+        write(tree, rel, transform_row_tints(read(tree, rel), rel))
     # Download URL rewrite across the three sites that actually display/open
     # it. r$n/ShowApp carry it bare; r.smali carries it Lua-commented ("#...").
-    for rel in ("smali/android/ext/r$n.smali", "smali/android/ext/ShowApp.smali"):
+    for rel in profile.files_list("url_sites"):
         t = read(tree, rel)
         n = t.count(DOWNLOAD_URL_OLD)
         if n != 1:
             raise PatchError(f"{rel}: expected 1 download-URL literal, found {n}")
         write(tree, rel, t.replace(DOWNLOAD_URL_OLD, DOWNLOAD_URL_NEW))
-    rt = read(tree, TRACK)
+    rt = read(tree, profile.file("main_activity"))
     if rt.count("#" + DOWNLOAD_URL_OLD) != 1:
         raise PatchError("r.smali: expected 1 commented download-URL literal")
-    write(tree, TRACK, rt.replace("#" + DOWNLOAD_URL_OLD, "#" + DOWNLOAD_URL_NEW))
-    write(tree, "res/layout/keyboard.xml",
-          transform_keyboard_layout(read(tree, "res/layout/keyboard.xml")))
-    write(tree, "res/drawable/btn_keyboard_key_lxx_dark.xml",
-          transform_kbd_selector(read(tree, "res/drawable/btn_keyboard_key_lxx_dark.xml")))
+    write(tree, profile.file("main_activity"), rt.replace("#" + DOWNLOAD_URL_OLD, "#" + DOWNLOAD_URL_NEW))
+    # The tabs' empty states never show: the search tab's nothing-found block
+    # and the saved list's "empty list" scroller lose their setEmptyView wiring
+    # (the framework toggles them by itself, so the XML would not hold) and are
+    # marked gone in the layout. The TextViews inside stay — the startup
+    # scramble reads and rewrites their text.
+    write(tree, profile.file("main_service"),
+          transform_empty_views(read(tree, profile.file("main_service")), ids))
+    write(tree, profile.layout("service_dialog"),
+          transform_dialog_empty_state(read(tree, profile.layout("service_dialog"))))
+    write(tree, profile.layout("keyboard"),
+          transform_keyboard_layout(read(tree, profile.layout("keyboard"))))
+    write(tree, profile.layout("keyboard_selector"),
+          transform_kbd_selector(read(tree, profile.layout("keyboard_selector"))))
+    # Every other layout GameGuardian ships: the fields, the horizontal bars
+    # and the hardcoded colours in them become the Nexus ones.
+    for _rel in GG_SURFACE_LAYOUTS:
+        _p = f"res/layout/{_rel}"
+        write(tree, _p, transform_gg_surface(read(tree, _p), _rel))
     rebrand(tree)
+    # Our own smali classes target the rebranded package, so they land after it.
+    copy_smali(tree)
+    # Lua namespace: rendered templates plus the one Script.smali call that
+    # registers the table. Renders against the lock file, so it must run here
+    # (ids are resolved once) and never against a copied template directory.
+    apply_lua(tree, ids)
+
+
+def _source_of(tree: Path) -> Path | None:
+    """The unpatched tree a patched output was made from, if it is still there.
+
+    `check` on an output folder needs the original to diff against: the two
+    resource-id audits are *deltas* (no id may move, no new unreachable
+    findViewById may appear), because GG's own code has lookups that legitimately
+    miss. With no source to diff against those audits cannot run, so they are
+    skipped rather than reported as clean.
+    """
+    if not tree.name.endswith(OUTPUT_SUFFIX):
+        return None
+    src = tree.with_name(tree.name[: -len(OUTPUT_SUFFIX)])
+    return src if src.is_dir() else None
 
 
 def cmd_check(args) -> int:
@@ -165,8 +229,11 @@ def cmd_check(args) -> int:
         print(f"FAIL: {e}", file=sys.stderr)
         return 2
     if is_patched(tree):
-        errors, label = postflight(tree, ids), "POSTFLIGHT"
+        src = _source_of(tree)
+        errors, label = postflight(tree, ids, src), "POSTFLIGHT"
         state = "patched tree"
+        if delta_audits_skipped(src):
+            state += " (delta audits SKIPPED: source tree not found)"
     else:
         errors, label = preflight(tree, ids), "PREFLIGHT"
         state = "unpatched tree"
@@ -189,7 +256,7 @@ def cmd_ids(args) -> int:
         return 2
     print(f"ID lock file: {LOCK_PATH}")
     print(f"GG release recorded: {ids.data.get('gg_release')}   tree: {detect_version(tree)}")
-    for kind in ("id", "drawable", "layout", "string"):
+    for kind in KINDS:
         table = ids.nexus.get(kind, {})
         print(f"\nNexus {kind} ids ({len(table)}):")
         for name, hexval in sorted(table.items(), key=lambda kv: int(kv[1], 16)):

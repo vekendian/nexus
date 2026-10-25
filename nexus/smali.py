@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 
 from .anchors import PatchError, replace_once
-from .modules import modules_methods, transform_activity_result
+from .extensions import extensions_methods as modules_methods
 
 REGISTERS_ANCHOR = '''\
 .method public onClick(Landroid/view/View;)V
@@ -50,10 +50,32 @@ ARRAY_ANCHOR = '''\
 # resolved BY NAME; the rest are Nexus ids from the lock file.
 _ARRAY_GG = ("btn_stop_service", "btn_start_usage", "check", "fix_it",
              "language", "help")
-_ARRAY_NEXUS = ("nexus_tab_home", "nexus_tab_modules", "nexus_tab_settings",
+_ARRAY_NEXUS = ("nexus_tab_home", "nexus_tab_extensions", "nexus_tab_settings",
                 "nexus_power_card", "nexus_row_exit", "nexus_row_check",
                 "nexus_row_language", "nexus_row_help", "nexus_row_fix",
-                "nexus_modules_add")
+                "nexus_extensions_add")
+
+# onItemClick's switch is separate from x()'s switch. The case body must sit
+# before the sparse-switch table and the table entries follow the last stock
+# key (0x7f050123). p2 is the clicked View, so its context is the activity that
+# owns the settings screen.
+CONFIG_PERMISSIONS_CASE_ANCHOR = '''    :sswitch_0
+    invoke-direct/range {p0 .. p0}, Landroid/ext/ConfigListAdapter;->u()V
+
+    goto/16 :goto_b'''
+
+CONFIG_PERMISSIONS_CASE_NEW = '''    :sswitch_nexus_permissions
+    invoke-virtual/range {p2 .. p2}, Landroid/view/View;->getContext()Landroid/content/Context;
+
+    move-result-object v1
+
+    invoke-static {v1}, Landroid/ext/r;->nexusPermissionsOpen(Landroid/content/Context;)V
+
+    goto/16 :goto_b
+
+    ''' + CONFIG_PERMISSIONS_CASE_ANCHOR
+
+CONFIG_ONITEM_METHOD = ".method public onItemClick(Landroid/widget/AdapterView;Landroid/view/View;IJ)V"
 
 
 def _array_new(ids) -> str:
@@ -240,19 +262,19 @@ DENSITY_BLOCK = '''\
     iget v9, v0, Landroid/util/DisplayMetrics;->density:F
 '''
 
-TAB_KEYS = ("home", "modules", "settings")
+TAB_KEYS = ("home", "extensions", "settings")
 
 # Which navbar pill/label/icon belongs to which tab, by NAME. Ids come from the
 # lock file at render time.
-_TAB_PILL = {"home": "nexus_pill_home", "modules": "nexus_pill_modules",
+_TAB_PILL = {"home": "nexus_pill_home", "extensions": "nexus_pill_extensions",
              "settings": "nexus_pill_settings"}
-_TAB_LABEL = {"home": "nexus_lbl_home", "modules": "nexus_lbl_modules",
+_TAB_LABEL = {"home": "nexus_lbl_home", "extensions": "nexus_lbl_extensions",
               "settings": "nexus_lbl_settings"}
-_TAB_ICON = {"home": "nexus_icon_home", "modules": "nexus_icon_modules",
+_TAB_ICON = {"home": "nexus_icon_home", "extensions": "nexus_icon_extensions",
              "settings": "nexus_icon_settings"}
-_TAB_PANEL = {"home": "nexus_panel_home", "modules": "nexus_panel_modules",
+_TAB_PANEL = {"home": "nexus_panel_home", "extensions": "nexus_panel_extensions",
               "settings": "nexus_panel_settings"}
-_TAB_INDEX = {"home": "0x0", "modules": "0x1", "settings": "0x2"}
+_TAB_INDEX = {"home": "0x0", "extensions": "0x1", "settings": "0x2"}
 
 
 def tabs_state(ids) -> list:
@@ -276,8 +298,8 @@ def _tab_body(key: str, show: str, hides: list, tail: str, tabs_state: list, ids
     for i, h in enumerate(hides):
         lines.append(_panel_vis(h, "0x8", f"{key}h{i}").rstrip("\n"))
     # The add button floats above the navbar and belongs to MODULES alone.
-    fab_vis = "0x0" if key == "modules" else "0x8"
-    lines.append(_panel_vis(ids.hex("nexus_modules_add"), fab_vis, f"{key}fab").rstrip("\n"))
+    fab_vis = "0x0" if key == "extensions" else "0x8"
+    lines.append(_panel_vis(ids.hex("nexus_extensions_add"), fab_vis, f"{key}fab").rstrip("\n"))
     lines.append(DENSITY_BLOCK.rstrip("\n"))
     for tkey, tp, tl, ti in tabs_state:
         if tkey == key:
@@ -298,13 +320,13 @@ def _sparse_switch(ids) -> str:
           ("check", "sswitch_3"), ("fix_it", "sswitch_2"),
           ("help", "sswitch_1"), ("language", "sswitch_0")]
     nexus = [("nexus_tab_home", "sswitch_nexus_tab_home"),
-             ("nexus_tab_modules", "sswitch_nexus_tab_modules"),
+             ("nexus_tab_extensions", "sswitch_nexus_tab_extensions"),
              ("nexus_tab_settings", "sswitch_nexus_tab_settings"),
              ("nexus_power_card", "sswitch_nexus_power"),
              ("nexus_row_exit", "sswitch_4"), ("nexus_row_check", "sswitch_3"),
              ("nexus_row_language", "sswitch_0"), ("nexus_row_help", "sswitch_1"),
              ("nexus_row_fix", "sswitch_2"),
-             ("nexus_modules_add", "sswitch_nexus_modules_add")]
+             ("nexus_extensions_add", "sswitch_nexus_extensions_add")]
     rows = [f"        {ids.gg(n)} -> :{lbl}" for n, lbl in gg]
     rows += [f"        {ids.hex(n)} -> :{lbl}" for n, lbl in nexus]
     return ("    :sswitch_data_0\n"
@@ -346,8 +368,8 @@ def _switch_new(ids) -> str:
     # Add button: opens the SAF picker. The result comes back through the
     # onActivityResult hook in modules.py.
     parts.append('''\
-    :sswitch_nexus_modules_add
-    invoke-direct {p0}, Landroid/ext/r;->nexusModulesPick()V
+    :sswitch_nexus_extensions_add
+    invoke-direct {p0}, Landroid/ext/r;->nexusExtensionsPick()V
 
     goto :goto_1''')
 
@@ -372,7 +394,7 @@ def _apply_tab_method(ids) -> str:
         "",
         "    const/4 v1, 0x1",
         "",
-        "    if-eq v0, v1, :nexus_apply_modules",
+        "    if-eq v0, v1, :nexus_apply_extensions",
         "",
         "    const/4 v1, 0x2",
         "",
@@ -412,7 +434,7 @@ def _fade_in_method(ids) -> str:
         "",
         "    const/4 v1, 0x1",
         "",
-        "    if-eq v0, v1, :nexus_fade_modules",
+        "    if-eq v0, v1, :nexus_fade_extensions",
         "",
         "    const/4 v1, 0x2",
         "",
@@ -424,7 +446,7 @@ def _fade_in_method(ids) -> str:
         "    const v1, " + tabs[0][1],
         "    goto :nexus_fade_run",
         "",
-        "    :nexus_fade_modules",
+        "    :nexus_fade_extensions",
         "    const v1, " + tabs[1][1],
         "    goto :nexus_fade_run",
         "",
@@ -932,7 +954,7 @@ Z_NEW = '''    const/4 v0, 0x1
 
     invoke-direct {p0}, Landroid/ext/r;->nexusEnv()V
 
-    invoke-direct {p0}, Landroid/ext/r;->nexusModulesRender()V
+    invoke-direct {p0}, Landroid/ext/r;->nexusExtensionsRender()V
 
     return-void
 .end method'''
@@ -1000,7 +1022,9 @@ POSTRESUME_NEW = '''    invoke-direct {p0, v0}, Landroid/ext/r;->y(Z)V
 
     invoke-direct {p0}, Landroid/ext/r;->nexusEnv()V
 
-    invoke-direct {p0}, Landroid/ext/r;->nexusModulesRender()V
+    invoke-direct {p0}, Landroid/ext/r;->nexusExtensionsDrain()V
+
+    invoke-direct {p0}, Landroid/ext/r;->nexusExtensionsRender()V
 
     invoke-super {p0}, La/a;->onPostResume()V
 
@@ -1198,6 +1222,96 @@ def transform_dialogs(smali: str, ids) -> str:
     return replace_once(smali, DIALOG_ANCHOR, new, "f.t dialog chrome")
 
 
+def transform_dialog_builder(smali: str) -> str:
+    """Replace f.smali's c(Context) dialog builder factory with NexusHost.dialogBuilder."""
+    return replace_once(smali, DIALOG_BUILDER_ANCHOR, DIALOG_BUILDER_NEW,
+                        "f.c dialog builder delegation")
+
+
+def transform_row_tints(smali: str, rel: str) -> str:
+    """Retint the row background colors in b3.smali and y0$b.smali to Nexus orange."""
+    # b3.smali: replaces -0x7f8bbd6c (orange) and -0x7f6b6bbe (yellow) with Nexus colors
+    # y0$b.smali: replaces -0x7f8bbd6c and -0x7f6b6bbe with Nexus colors
+    smali = smali.replace("-0x7f8bbd6c", "0x33ff7a00")  # orange
+    smali = smali.replace("-0x7f6b6bbe", "0x33ff7a00")  # yellow -> Nexus orange
+    return smali
+
+
+def transform_config_adapter(smali: str, ids) -> str:
+    """Route the floating Settings Permissions row to NexusHost."""
+    start = smali.find(CONFIG_ONITEM_METHOD)
+    if start < 0:
+        raise PatchError("ConfigListAdapter: onItemClick method not found")
+    end = smali.find(".end method", start)
+    if end < 0:
+        raise PatchError("ConfigListAdapter: onItemClick end not found")
+    body = smali[start:end]
+    if "sswitch_nexus_permissions" in body:
+        return smali
+    if body.count(CONFIG_PERMISSIONS_CASE_ANCHOR) != 1:
+        raise PatchError("ConfigListAdapter: onItemClick case anchor not found")
+    data_start = body.rfind(".sparse-switch")
+    data_end = body.find(".end sparse-switch", data_start)
+    if data_start < 0 or data_end < 0:
+        raise PatchError("ConfigListAdapter: onItemClick sparse-switch not found")
+    rows = [
+        ("nexus_row_permissions", "sswitch_nexus_permissions"),
+    ]
+    payload = "".join(
+        f"        {ids.hex(name)} -> :{label}\n" for name, label in rows)
+    body = body[:data_end] + payload + body[data_end:]
+    body = body.replace(CONFIG_PERMISSIONS_CASE_ANCHOR,
+                        CONFIG_PERMISSIONS_CASE_NEW, 1)
+    return smali[:start] + body + smali[end:]
+
+
+# ------------------------------------------------------------ empty views ---
+
+def set_empty_view_pattern(id_hex: str) -> re.Pattern:
+    """The four-instruction block that couples GG's lists to their empty state.
+
+    GG wires an AdapterView to an empty-state view with
+    AdapterView.setEmptyView; the framework then visibility-toggles that view
+    all by itself, so an XML `android:visibility="gone"` cannot keep it hidden
+    — the wiring itself must go. The regex is structural on purpose: baksmali
+    emits blank lines between instructions and the registers differ per site,
+    so the const register is a capture that every later reference must match
+    by backreference. A release that changed the shape fails loudly (count
+    != 1) instead of silently patching nothing.
+    """
+    return re.compile(
+        rf"    const (v\d+), {id_hex}\n\n"
+        rf"    invoke-virtual \{{\w+, \1\}}, "
+        rf"Landroid/view/View;->findViewById\(I\)Landroid/view/View;\n\n"
+        rf"    move-result-object \1\n\n"
+        rf"    (invoke-virtual \{{\w+, \1\}}, "
+        rf"Landroid/widget/AdapterView;->setEmptyView\(Landroid/view/View;\)V)"
+    )
+
+
+def transform_empty_views(smali: str, ids) -> str:
+    """Blind the two AdapterView.setEmptyView wirings in MainService.
+
+    The search tab shows its empty state (nothing_found_view) whenever the
+    results list is empty, and the saved-list tab shows empty_list_view the
+    same way — both never again. The views and their text are kept in
+    service_dialog.xml: MainService's startup block reads and rewrites their
+    text (a missing element would crash), the layout marks them gone instead.
+    Each invoke is 3 code units, so the replacement is 3 nops — that also
+    keeps the try range the search call sits inside non-empty.
+    """
+    for name in ("nothing_found_view", "empty_list_view"):
+        pat = set_empty_view_pattern(ids.gg(name))
+        n = len(pat.findall(smali))
+        if n != 1:
+            raise PatchError(f"MainService: {name} setEmptyView wiring found "
+                             f"{n}x (expected 1x)")
+        smali = pat.sub(
+            lambda m: m.group(0).replace(
+                m.group(2), "    nop\n    nop\n    nop"), smali)
+    return smali
+
+
 # ----------------------------------------------------------------- url ---
 
 def nexus_encode_url(url: str) -> str:
@@ -1211,6 +1325,14 @@ def nexus_encode_url(url: str) -> str:
     return "".join(chr(ord(c) + 3) for c in url)
 
 
+ROW_TINT_FILES = (
+    "smali/android/ext/b3.smali",
+    "smali/android/ext/y0$b.smali",
+)
+
+
+# ----------------------------------------------------------------- url ---
+
 DOWNLOAD_URL_OLD_PLAIN = "http://gameguardian.net/download"
 DOWNLOAD_URL_NEW_PLAIN = "https://github.com/vekendian/nexus"
 DOWNLOAD_URL_OLD = nexus_encode_url(DOWNLOAD_URL_OLD_PLAIN)
@@ -1222,17 +1344,35 @@ DOWNLOAD_URL_NEW = nexus_encode_url(DOWNLOAD_URL_NEW_PLAIN)
 # (107) -> index 1, which would silently retarget the button. Left untouched.
 
 KBD_LAYOUT_ANCHOR = 'android:background="@drawable/keyboard_background_lxx_dark"'
-KBD_LAYOUT_NEW = 'android:background="@drawable/nexus_kbd_background"'
+# The keyboard panel gets no background of its own: the dialog surface behind
+# it (installed in code by f.smali t()) becomes its background, so the pad
+# reads as tiles floating on the dialog instead of a box inside a box.
+KBD_LAYOUT_NEW = 'android:background="@null"'
+
+# The key grid is wrap_content inside a fill_parent keyboard, and the scroll
+# container that holds it sets no gravity, so the pad sat in the top-left
+# corner of the screen with dead space to the right. One gravity line centers
+# it (most visible on wide tablets).
+KBD_GRAVITY_ANCHOR = ('<android.fix.HorizontalScrollView android:layout_width='
+                      '"wrap_content" android:layout_height="wrap_content">')
+KBD_GRAVITY_NEW = ('<android.fix.HorizontalScrollView android:layout_gravity='
+                   '"center_horizontal" android:layout_width="wrap_content" '
+                   'android:layout_height="wrap_content">')
 
 # NOTE: no <?xml?> declaration here — transform_kbd_selector keeps the original
 # one that precedes <selector>, and a second declaration would be invalid XML.
-# Only state_pressed is styled; activated/focused are omitted because
-# InternalKeyboard is focusable="true" and a focused key would stay painted.
+# The ONLY styled state is state_pressed. There is no default item on purpose:
+# a selector that matches nothing draws nothing, so a resting key is invisible
+# and the dialog surface behind the keyboard becomes the key's background —
+# the pad reads as floating glyphs that light up under the finger. Putting a
+# colour (even the dialog's own) back on the default state would rebuild the
+# packed-tile wall the resting keys used to make. activated/focused must stay
+# out as well: InternalKeyboard is focusable="true", so either would leave a
+# key stuck in the pressed colour.
 KBD_SELECTOR_NEW = '''<selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:state_pressed="true"
         android:drawable="@drawable/nexus_kbd_key_pressed" />
-    <item android:drawable="@drawable/nexus_kbd_key_normal" />
 </selector>'''
 
 
@@ -1271,3 +1411,84 @@ def transform_settings_highlight(smali: str) -> str:
     """Retint the settings-row highlight from GG yellow to Nexus orange."""
     return replace_once(smali, SETTINGS_HIGHLIGHT_ANCHOR,
                         SETTINGS_HIGHLIGHT_NEW, "settings highlight")
+
+
+# "NX". GG's own startActivityForResult codes are computed from fields rather
+# than literals, so a collision cannot be ruled out by reading the tree. This
+# code is checked FIRST and any mismatch falls through untouched to GG's own
+# installer dispatch, so a collision would surface as a picker that does not
+# open rather than as a stolen install result.
+SAF_REQUEST = "0x4e58"
+
+PREFS_NAME = "nexus_extensions"
+PREFS_KEY = "uris"
+
+# GG's onActivityResult logs, calls super, then dispatches to the installer
+# when r.d is set. Our check goes in at the very top and returns early, so it
+# can never consume GG's result.
+ONACTIVITYRESULT_ANCHOR = '''\
+.method protected onActivityResult(IILandroid/content/Intent;)V
+    .locals 2'''
+
+ONACTIVITYRESULT_NEW = f'''\
+.method protected onActivityResult(IILandroid/content/Intent;)V
+    .locals 2
+
+    # Nexus: park our picker's Uri, then return before GG's own dispatch can
+    # consume the result. Every other request code falls through to the stock
+    # body untouched (installer dispatch included), so this insertion must stay
+    # a prelude -- its own text ends before the stock first instruction and
+    # carries no super call and no .end method.
+    const v0, {SAF_REQUEST}
+
+    if-ne p1, v0, :nexus_aar_gg
+
+    if-eqz p2, :nexus_aar_gg
+
+    invoke-virtual {{p3}}, Landroid/content/Intent;->getData()Landroid/net/Uri;
+
+    move-result-object v0
+
+    if-eqz v0, :nexus_aar_gg
+
+    invoke-static {{p0, v0}}, Lorg/vekendian/nexus/extensions/NexusHost;->parkFromActivity(Landroid/app/Activity;Landroid/net/Uri;)V
+
+    return-void
+
+    :nexus_aar_gg
+'''
+
+def transform_activity_result(smali: str) -> str:
+    """Hook the SAF result ahead of GG's own onActivityResult dispatch."""
+    return replace_once(smali, ONACTIVITYRESULT_ANCHOR, ONACTIVITYRESULT_NEW,
+                        "onActivityResult SAF hook")
+
+# ===== f.smali: the dialog factory delegates to the engine theme =====
+
+ENGINE = "Lorg/vekendian/nexus/extensions/NexusHost;"
+
+# The dialog builder factory method c(Context) in f.smali must delegate to
+# NexusHost.dialogBuilder so that all dialogs get the Nexus theme.
+DIALOG_BUILDER_ANCHOR = '''\
+.method public static c(Landroid/content/Context;)Landroid/app/AlertDialog$Builder;
+    .locals 1
+
+    .line 1
+    new-instance v0, Landroid/app/AlertDialog$Builder;
+
+    invoke-direct {v0, p0}, Landroid/app/AlertDialog$Builder;-><init>(Landroid/content/Context;)V
+
+    return-object v0
+.end method'''
+
+DIALOG_BUILDER_NEW = f'''\
+.method public static c(Landroid/content/Context;)Landroid/app/AlertDialog$Builder;
+    .locals 1
+
+    .line 1
+    invoke-static {{p0}}, {ENGINE}->dialogBuilder(Landroid/content/Context;)Landroid/app/AlertDialog$Builder;
+
+    move-result-object v0
+
+    return-object v0
+.end method'''

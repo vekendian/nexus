@@ -3,9 +3,10 @@
   Nexus dialog theme.
 
   FixTheme sets android:alertDialogTheme + android:dialogTheme to @style/NexusDialog.
-  FixTheme is declared on <application> in the manifest, so this applies to every
-  dialog the app shows — including ones built from the service context — without
-  touching any of the ~300 AlertDialog.Builder call sites.
+  FixTheme is declared on <application> in the manifest, and android/ext/f.c is
+  redirected through NexusHost.dialogBuilder so every GG dialog builder gets a
+  NexusDialog-themed Context — including ones built from the service context —
+  without touching any of the ~300 AlertDialog.Builder call sites.
 
   Two items used to live here and were deliberately removed:
 
@@ -15,29 +16,47 @@
     android:backgroundDimAmount    Dead. Left unset so the framework default (0.6)
                                    applies; the smali path does not touch dim.
 
-  The rest of this style is still live: it supplies button metrics and colours,
-  and the content-button styling that dialogs inflate themselves rely on.
+  The button styles are the same one style everywhere:
+
+    NexusDialogContentButton   the global button: the orange pill, carried by
+                          android:buttonStyle here and on FixTheme, by the
+                          layout rule in transform_gg_surface, and by normal
+                          dialog content — every Button wears it
+    NexusDialogBarButton       the alert bar variant: the same pill wrapped in
+                          a 3dp horizontal inset, because AlertDialog's bar
+                          stretches its equal-weight buttons edge to edge and
+                          three unfilled pills would fuse into one orange slab
+
+  Orange used to belong to one button per screen. Now every button is the
+  orange pill, bar buttons included; the bare-text NexusDialogButton style is
+  gone.
 -->
 <resources>
-    <style name="NexusDialogButton" parent="@android:style/Widget.Material.Button.Borderless.Colored">
-        <item name="android:textColor">@color/nexus_orange</item>
-        <item name="android:textAllCaps">false</item>
-        <item name="android:minWidth">64dp</item>
-        <item name="android:minHeight">48dp</item>
-        <item name="android:textSize">14sp</item>
-    </style>
-
-    <!-- android.fix.Button extends android.widget.Button with a passthrough
-         constructor, so it resolves styling from the theme's android:buttonStyle
-         rather than a TypedArray. Setting that attr on NexusDialog is what
-         restyles every button sitting inside dialog content. -->
+    <!-- Global: the orange pill every button wears -->
     <style name="NexusDialogContentButton" parent="@android:style/Widget.Material.Button">
         <item name="android:background">@drawable/nexus_bg_button</item>
-        <!-- Widget.Material.Button tints whatever background it is handed via
-             backgroundTint, which washes nexus_bg_button back out to a light
-             stock grey. Clear the tint so the custom drawable survives. -->
-        <item name="android:backgroundTint">@android:color/transparent</item>
-        <item name="android:textColor">@color/nexus_orange</item>
+        <item name="android:textColor">@color/nexus_btn_text</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minWidth">64dp</item>
+        <item name="android:minHeight">35dp</item>
+        <item name="android:paddingLeft">10dp</item>
+        <item name="android:paddingRight">10dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- Bar: the same pill inside a 3dp inset so adjacent bar buttons keep a
+         gap. The AlertDialog bar stretches its equal-weight buttons, so the
+         gap has to live in the drawable: these buttons are created in code,
+         and layout margins from a style are ignored on code-created views. -->
+    <style name="NexusDialogBarButton" parent="@style/NexusDialogContentButton">
+        <item name="android:background">@drawable/nexus_bg_button_bar</item>
+    </style>
+
+    <!-- Primary: filled orange button for dialog content (used programmatically) -->
+    <style name="NexusDialogPrimaryButton" parent="@android:style/Widget.Material.Button">
+        <item name="android:background">@drawable/nexus_bg_primary</item>
+        <item name="android:textColor">@color/nexus_on_orange</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:minHeight">48dp</item>
         <item name="android:textSize">15sp</item>
@@ -50,8 +69,8 @@
         <item name="android:textColorAlertDialogListItem">@color/nexus_text</item>
         <item name="android:colorAccent">@color/nexus_orange</item>
         <item name="android:buttonStyle">@style/NexusDialogContentButton</item>
-        <item name="android:buttonBarPositiveButtonStyle">@style/NexusDialogButton</item>
-        <item name="android:buttonBarNegativeButtonStyle">@style/NexusDialogButton</item>
-        <item name="android:buttonBarNeutralButtonStyle">@style/NexusDialogButton</item>
+        <item name="android:buttonBarPositiveButtonStyle">@style/NexusDialogBarButton</item>
+        <item name="android:buttonBarNegativeButtonStyle">@style/NexusDialogBarButton</item>
+        <item name="android:buttonBarNeutralButtonStyle">@style/NexusDialogBarButton</item>
     </style>
 </resources>

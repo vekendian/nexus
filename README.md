@@ -25,8 +25,9 @@
 
 Re-skins GameGuardian as **Nexus** on any apktool-decoded GG tree: navbar and
 card panels, a power card, an ENVIRONMENT readout, localised settings rows, a
-modern dialog theme, a restyled keyboard, and a rebrand to
-`org.vekendian.nexus` v1.0.0.
+modern dialog theme, a restyled keyboard, a Nexus-branded floating interface
+(the icon, its speed controls and the time-jump panel, all of which sit over a
+game screen), and a rebrand to `org.vekendian.nexus` v1.0.0.
 
 Bring your own GG APK. The patcher makes no network calls and never
 modifies the tree you point it at.
@@ -107,7 +108,7 @@ python3 nexus.py ids --src gg_src
 ```
 
 ```
-Nexus id ids (29):
+Nexus id ids (38):
   0x7f050160  nexus_tab_home
   ...
 GameGuardian bindings (resolved by name from public.xml):
@@ -129,7 +130,8 @@ nexus/
   ids.py              ID resolver (nexus_ids.json lock file)
   anchors.py          PatchError, replace_once — the exact-anchor engine
   smali.py            all Nexus smali templates + render()
-  layout.py           main.xml blocks: navbar, panels, ENVIRONMENT cards
+  layout.py            main.xml blocks: navbar, panels, ENVIRONMENT cards;
+                       the floating interface (hot_point_view, time_jump_panel)
   manifest.py         rebrand: package, label, version
   checks.py           preflight / postflight / ID audit
   tree.py             resolve_tree, output clone, read/write

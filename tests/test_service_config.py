@@ -1,8 +1,9 @@
-"""The settings screen: orange bands, no donate row, retinted highlight.
+"""The floating settings screen: orange bands, Permissions section, highlight.
 
-Three separate edits, all on res/layout/service_config.xml plus one const in
-ConfigListAdapter.smali. Every one of them is asserted by count so a GameGuardian
-update that reshuffles the screen fails loudly instead of half-applying.
+The donate row is removed. Permissions moves into its own "Nexus modules"
+section directly above GG's game-settings band, and ConfigListAdapter
+dispatches the row. Every edit is asserted by count so a GameGuardian update
+that reshuffles the screen fails loudly instead of half-applying.
 """
 
 from __future__ import annotations
@@ -10,8 +11,9 @@ from __future__ import annotations
 import pytest
 
 from nexus.anchors import PatchError
-from nexus.layout import (DONATE_ROW_RE, SERVICE_SEPARATOR_BG,
-                          SERVICE_SEPARATOR_COUNT, SERVICE_SEPARATOR_NEW,
+from nexus.layout import (DONATE_ROW_RE, NEXUS_EXTENSIONS_SEPARATOR,
+                          SERVICE_SEPARATOR_BG, SERVICE_SEPARATOR_COUNT,
+                          SERVICE_SEPARATOR_NEW, SERVICE_SEPARATOR_TOTAL,
                           transform_service_config)
 from nexus.smali import (SETTINGS_HIGHLIGHT_ANCHOR, SETTINGS_HIGHLIGHT_NEW,
                          transform_settings_highlight)
@@ -28,6 +30,8 @@ PRETTY = '''\
         android:text="@string/donate" />
     <android.fix.TextView android:textAppearance="@style/MediumText" android:id="@id/reset"
         android:text="@string/reset" />
+    <android.fix.TextView android:id="@id/game_section"
+        android:text="@string/game_settings" />
 '''
 
 INLINE = (
@@ -37,6 +41,7 @@ INLINE = (
     '<android.fix.TextView android:id="@id/help" android:text="@string/help" />\n'
     '<android.fix.TextView android:id="@id/donate" android:text="@string/donate" />\n'
     '<android.fix.TextView android:id="@id/reset" android:text="@string/reset" />\n'
+    '<android.fix.TextView android:id="@id/game_section" android:text="@string/game_settings" />\n'
 )
 
 
@@ -49,6 +54,7 @@ def _bands(xml="", n=SERVICE_SEPARATOR_COUNT):
 
 
 DONATE = '<android.fix.TextView android:id="@id/donate" android:text="@string/donate" />\n'
+GAME = '<android.fix.TextView android:id="@id/game_section" android:text="@string/game_settings" />\n'
 
 
 def _one_band(xml):
@@ -66,7 +72,7 @@ def _one_band(xml):
 def test_separator_bands_are_recoloured(make):
     out = transform_service_config(_one_band(make))
     assert SERVICE_SEPARATOR_BG not in out
-    assert out.count('@color/nexus_orange') == SERVICE_SEPARATOR_COUNT
+    assert out.count('@color/nexus_orange') == SERVICE_SEPARATOR_TOTAL
 
 
 def test_wrong_band_count_fails_loudly():
@@ -78,35 +84,52 @@ def test_wrong_band_count_fails_loudly():
 
 
 def test_all_five_bands_recoloured():
-    out = transform_service_config(_bands(DONATE, SERVICE_SEPARATOR_COUNT))
-    assert out.count('@color/nexus_orange') == SERVICE_SEPARATOR_COUNT
+    out = transform_service_config(_bands(DONATE, SERVICE_SEPARATOR_COUNT) + GAME)
+    assert out.count('@color/nexus_orange') == SERVICE_SEPARATOR_TOTAL
     assert "#ff422654" not in out
 
 
 # ------------------------------------------------------------------ donate ---
 
 @pytest.mark.parametrize("make", [PRETTY, INLINE])
-def test_donate_row_is_removed(make):
+def test_donate_row_is_removed_and_permissions_gets_its_own_section(make):
     out = transform_service_config(_one_band(make))
     assert "@id/donate" not in out
     assert "@string/donate" not in out
+    assert out.count("@id/nexus_row_permissions") == 1
+    assert out.count(NEXUS_EXTENSIONS_SEPARATOR) == 1
+    assert "@string/nexus_str_permissions" in out
+    # the action rows are gone with their strings
+    assert "nexus_row_extensions" not in out
+    assert "nexus_str_extensions" not in out
+    assert out.index("@string/nexus_str_permissions_section") < \
+        out.index("@id/nexus_row_permissions") < \
+        out.index("@id/game_section")
 
 
-def test_donate_removal_leaves_neighbours_intact():
+def test_permissions_row_leaves_neighbours_intact():
     xml = _bands(
         '<android.fix.TextView android:textAppearance="@style/MediumText" android:id="@id/help" />\n'
         '<android.fix.TextView android:textAppearance="@style/MediumText" android:id="@id/donate" />\n'
-        '<android.fix.TextView android:textAppearance="@style/MediumText" android:id="@id/reset" />\n',
+        '<android.fix.TextView android:textAppearance="@style/MediumText" android:id="@id/reset" />\n'
+        '<android.fix.TextView android:id="@id/game_section" />\n',
         SERVICE_SEPARATOR_COUNT)
     out = transform_service_config(xml)
     assert "@id/help" in out and "@id/reset" in out
+    assert "@id/nexus_row_permissions" in out
 
 
 def test_missing_donate_row_fails_loudly():
     with pytest.raises(PatchError) as e:
         transform_service_config(_bands(DONATE.replace("@id/donate", "@id/gone"),
-                                        SERVICE_SEPARATOR_COUNT))
+                                        SERVICE_SEPARATOR_COUNT) + GAME)
     assert "donate row" in str(e.value)
+
+
+def test_missing_game_section_fails_loudly():
+    with pytest.raises(PatchError) as e:
+        transform_service_config(_bands(DONATE, SERVICE_SEPARATOR_COUNT))
+    assert "game_section" in str(e.value)
 
 
 def test_donate_regex_does_not_eat_other_rows():
