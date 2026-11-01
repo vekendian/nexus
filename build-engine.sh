@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the Nexus extension engine: Java -> smali (host) and Java -> dex (asset).
+# Build the Nexus module engine: Java -> smali (host) and Java -> dex (asset).
 #
 #   bash build-engine.sh            regenerate resources/smali + resources/res/raw
 #   bash build-engine.sh --check    regenerate into build/check and diff; no writes
@@ -12,7 +12,7 @@
 # engine's own nexus.* classes and never a duplicate of the host classes:
 #
 #   resources/java/api      org.vekendian.nexus.api.*       -> host smali + module-api.jar
-#   resources/java/host     org.vekendian.nexus.extensions.* -> host smali
+#   resources/java/host     org.vekendian.nexus.modules.* -> host smali
 #   resources/java/dexexec  nexus.ExtensionRegistry + helpers -> res/raw/ydw_nexus_dexexec (dex)
 #
 # Tool paths come from the environment, defaulting to what this checkout has:
@@ -154,7 +154,7 @@ if [ "$CHECK_ONLY" = 1 ]; then
         if [ ! -f "$WORK/smali/$rel" ]; then
             echo "  ORPHAN   $rel"; status=1
         fi
-    done < <(cd "$SMALI_OUT" && find org/vekendian/nexus/api org/vekendian/nexus/extensions \
+    done < <(cd "$SMALI_OUT" && find org/vekendian/nexus/api org/vekendian/nexus/modules \
                  -name '*.smali' 2>/dev/null | sort)
     if [ ! -f "$SMALI_OUT/org/vekendian/nexus/ModulePicker.smali" ]; then
         echo "  MISSING  org/vekendian/nexus/ModulePicker.smali (hand-written; the"
@@ -177,8 +177,8 @@ echo "==> install into resources/"
 # Only our two generated packages. org/vekendian/nexus/ModulePicker.smali is
 # hand-written and shares the parent directory, so the packages are removed
 # individually instead of wiping org/vekendian/nexus.
-rm -rf "$SMALI_OUT/org/vekendian/nexus/api" "$SMALI_OUT/org/vekendian/nexus/extensions"
-for pkg in api extensions; do
+rm -rf "$SMALI_OUT/org/vekendian/nexus/api" "$SMALI_OUT/org/vekendian/nexus/modules"
+for pkg in api modules; do
     [ -d "$WORK/smali/org/vekendian/nexus/$pkg" ] || continue
     mkdir -p "$SMALI_OUT/org/vekendian/nexus"
     cp -r "$WORK/smali/org/vekendian/nexus/$pkg" "$SMALI_OUT/org/vekendian/nexus/"
@@ -195,6 +195,6 @@ mkdir -p "$(dirname "$API_JAR")"
 cp "$WORK/module-api.jar" "$API_JAR"
 
 echo
-echo "smali:     resources/smali/org/vekendian/nexus/{api,extensions}"
+echo "smali:     resources/smali/org/vekendian/nexus/{api,modules}"
 echo "asset dex: resources/res/raw/ydw_nexus_dexexec"
 echo "api jar:   ${API_JAR#$ROOT/}   (classpath for module authors)"

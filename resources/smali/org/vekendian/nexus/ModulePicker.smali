@@ -19,7 +19,7 @@
 #
 # This class exists only to be a standard-launch-mode activity inside the host's
 # task, call startActivityForResult() on ITSELF, park the chosen Uri in the
-# extension system, and finish. The host drains it on the next onPostResume.
+# module system, and finish. The host drains it on the next onPostResume.
 #
 # Theme is translucent rather than NoDisplay: NoDisplay forbids the activity
 # surviving onResume, and we have to stay alive to receive the result.
@@ -135,10 +135,10 @@
     # not turn into a NullPointerException before the picker finishes.
     if-eqz v0, :mp_finish
 
-    # Hand the document to the extension system. It used to be parked in a static on
+    # Hand the document to the module system. It used to be parked in a static on
     # android/ext/r; that field is gone -- NexusHost owns it now, so an extension
     # import cannot be lost to a field the host class no longer declares.
-    invoke-static {p0, v0}, Lorg/vekendian/nexus/extensions/NexusHost;->parkFromActivity(Landroid/app/Activity;Landroid/net/Uri;)V
+    invoke-static {p0, v0}, Lorg/vekendian/nexus/modules/NexusHost;->parkFromActivity(Landroid/app/Activity;Landroid/net/Uri;)V
 
     invoke-virtual {v0}, Landroid/net/Uri;->toString()Ljava/lang/String;
 

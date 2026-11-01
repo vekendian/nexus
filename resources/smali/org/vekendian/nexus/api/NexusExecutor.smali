@@ -7,17 +7,6 @@
 .method public abstract add(Landroid/content/Context;Landroid/net/Uri;)Ljava/lang/String;
 .end method
 
-.method public abstract extensions()Ljava/util/List;
-    .annotation system Ldalvik/annotation/Signature;
-        value = {
-            "()",
-            "Ljava/util/List<",
-            "Lorg/vekendian/nexus/api/ExtensionInfo;",
-            ">;"
-        }
-    .end annotation
-.end method
-
 .method public abstract failure()Ljava/lang/String;
 .end method
 
@@ -27,13 +16,24 @@
 .method public abstract jarSpec(Ljava/lang/String;)[Ljava/lang/String;
 .end method
 
-.method public abstract loadExtension(Ljava/lang/String;)Ljava/lang/Object;
-.end method
-
 .method public abstract loadLibrary(Ljava/lang/String;)Ljava/lang/ClassLoader;
 .end method
 
+.method public abstract loadModule(Ljava/lang/String;)Ljava/lang/Object;
+.end method
+
 .method public abstract luaSource(Ljava/lang/String;)[Ljava/lang/String;
+.end method
+
+.method public abstract modules()Ljava/util/List;
+    .annotation system Ldalvik/annotation/Signature;
+        value = {
+            "()",
+            "Ljava/util/List<",
+            "Lorg/vekendian/nexus/api/ModuleInfo;",
+            ">;"
+        }
+    .end annotation
 .end method
 
 .method public abstract remove(Ljava/lang/String;)Z

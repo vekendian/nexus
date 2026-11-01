@@ -10,10 +10,10 @@
 # the one GG-owned edit the namespace needs, and it is one call line plus one
 # helper method.
 #
-# The table itself never depends on the extension engine: `nexus` and
+# The table itself never depends on the module engine: `nexus` and
 # `nexus.version` exist in every script, even one that runs before Nexus has
-# booted. Only categories that need the engine (NexusLua$Extensions) check for
-# it, and only they return "extension system is not running".
+# booted. Only categories that need the engine (NexusLua$Modules) check for
+# it, and only they return "module system is not running".
 #
 # Categories are registered here, one call per category. Adding one is a new
 # NexusLua$<Category> class and one line, without touching this table code or
@@ -37,17 +37,27 @@
 
     const-string v2, "1.0.0"
 
-    invoke-static {v2}, Lluaj/LuaValue;->valueOf(Ljava/lang/String;)Lluaj/LuaValue;
+    # K2(String) is this build's obfuscated LuaValue.valueOf(String) -> LuaString.
+    # LuaValue has no method named valueOf at all: a plain name here silently
+    # killed the whole install (caught in Script.nexusInstall), leaving nexus
+    # nil in every script. Pinned by the stock-resolution test in
+    # test_lua_bridge.py.
+    invoke-static {v2}, Lluaj/LuaValue;->K2(Ljava/lang/String;)Lluaj/LuaString;
 
     move-result-object v2
 
     invoke-virtual {v0, v1, v2}, Lluaj/LuaValue;->i2(Ljava/lang/String;Lluaj/LuaValue;)V
 
-    invoke-static {p0, v0, p1}, Lorg/vekendian/nexus/lua/NexusLua$Extensions;->install(Ljava/lang/String;Lluaj/LuaValue;Lluaj/LuaValue;)V
-
+    # The global is bound BEFORE the categories attach. The Script-side helper
+    # runs this under a silentThrowable catch; if a category could abort the
+    # install, the script's view of nexus would be a whole-table nil, and even
+    # nexus.version would be unreadable. Failures now shrink the table's
+    # contents at worst: a nil nexus.modules, never a nil nexus.
     const-string v1, "nexus"
 
     invoke-virtual {p1, v1, v0}, Lluaj/LuaValue;->i2(Ljava/lang/String;Lluaj/LuaValue;)V
+
+    invoke-static {p0, v0, p1}, Lorg/vekendian/nexus/lua/NexusLua$Modules;->install(Ljava/lang/String;Lluaj/LuaValue;Lluaj/LuaValue;)V
 
     :done
     return-void

@@ -32,7 +32,7 @@ import pytest
 from nexus.apicheck import ANDROID_JAR, declared_methods, unresolved, _fmt
 from nexus.tree import RES_DIR
 
-# The extension engine is generated smali, audited for the same reason as
+# The module engine is generated smali, audited for the same reason as
 # hand-written: apicheck resolves the framework members it calls, which is the
 # one failure mode a compiler cannot catch (a member that does not exist on the
 # device, or never existed).
@@ -41,20 +41,20 @@ APPLIED = [
     "smali/android/ext/f.smali",
     "smali/android/ext/ConfigListAdapter.smali",
     "smali/org/vekendian/nexus/ModulePicker.smali",
-    "smali/org/vekendian/nexus/api/ExtensionApi.smali",
-    "smali/org/vekendian/nexus/api/ExtensionManifest.smali",
-    "smali/org/vekendian/nexus/api/ExtensionInfo.smali",
-    "smali/org/vekendian/nexus/api/ExtensionType.smali",
+    "smali/org/vekendian/nexus/api/ModuleApi.smali",
+    "smali/org/vekendian/nexus/api/ModuleManifest.smali",
+    "smali/org/vekendian/nexus/api/ModuleInfo.smali",
+    "smali/org/vekendian/nexus/api/ModuleType.smali",
     "smali/org/vekendian/nexus/api/NexusExecutor.smali",
-    "smali/org/vekendian/nexus/extensions/NexusHost.smali",
-    "smali/org/vekendian/nexus/extensions/ExtensionApiImpl.smali",
-    "smali/org/vekendian/nexus/extensions/ExtensionCards.smali",
-    "smali/org/vekendian/nexus/extensions/ExtensionLoader.smali",
+    "smali/org/vekendian/nexus/modules/NexusHost.smali",
+    "smali/org/vekendian/nexus/modules/ModuleApiImpl.smali",
+    "smali/org/vekendian/nexus/modules/ModuleCards.smali",
+    "smali/org/vekendian/nexus/modules/ModuleLoader.smali",
 ]
 SHIPPED = [
     "smali/org/vekendian/nexus/ModulePicker.smali",
-    "smali/org/vekendian/nexus/extensions/NexusHost.smali",
-    "smali/org/vekendian/nexus/extensions/ExtensionLoader.smali",
+    "smali/org/vekendian/nexus/modules/NexusHost.smali",
+    "smali/org/vekendian/nexus/modules/ModuleLoader.smali",
 ]
 
 
@@ -149,7 +149,7 @@ def test_engine_avoids_the_constructor_that_failed():
     """
     from nexus.tree import RES_DIR
 
-    engine = (RES_DIR / "smali/org/vekendian/nexus/extensions/NexusHost.smali").read_text()
+    engine = (RES_DIR / "smali/org/vekendian/nexus/modules/NexusHost.smali").read_text()
     assert "setClassName" in engine
     # Narrow to the Intent constructors: java.lang.Class itself is legitimately
     # used by the engine (getClassLoader, and the Class[] the reflective

@@ -54,10 +54,10 @@ def test_no_two_strings_say_the_same_thing():
 
 
 def test_the_rows_name_their_scope():
-    """The permission capabilities are about ONE extension, so they say one."""
+    """The permission capabilities are about ONE module, so they say one."""
     strings = _strings()
-    assert strings["nexus_str_perm_install"] == "Install an extension"
-    assert strings["nexus_str_perm_uninstall"] == "Uninstall an extension"
+    assert strings["nexus_str_perm_install"] == "Install a module"
+    assert strings["nexus_str_perm_uninstall"] == "Uninstall a module"
     assert "nexus_str_perm_run" not in strings
     assert "nexus_str_perm_stop" not in strings
 
@@ -148,7 +148,7 @@ def test_the_check_glyph_exists_and_is_ink_on_orange():
 
 
 def test_the_allow_ask_pair_is_rebuilt_in_java():
-    java = _java("host/org/vekendian/nexus/extensions/NexusHost.java")
+    java = _java("host/org/vekendian/nexus/modules/NexusHost.java")
     assert "syncPermissionButtons(Context ui" in java
     assert "markChosen(" in java
     assert "setCompoundDrawablesRelativeWithIntrinsicBounds" in java
@@ -157,11 +157,11 @@ def test_the_allow_ask_pair_is_rebuilt_in_java():
 def test_the_permissions_dialog_says_what_it_edits():
     """The rows are the defaults for every script; a script that answered
     for itself keeps its own answer, and the row has to say so."""
-    java = _java("host/org/vekendian/nexus/extensions/NexusHost.java")
+    java = _java("host/org/vekendian/nexus/modules/NexusHost.java")
     assert "nexus_str_perm_default_note" in java
     assert "nexus_str_perm_script_override" in java
     assert "LuaBridge.scriptOverride(cap)" in java
-    perms = _java("host/org/vekendian/nexus/extensions/LuaPerms.java")
+    perms = _java("host/org/vekendian/nexus/modules/LuaPerms.java")
     assert "anyScriptOverride" in perms
     assert "KEY_PREFIX_SCRIPT" in perms
 

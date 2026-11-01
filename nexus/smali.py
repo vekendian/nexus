@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 
 from .anchors import PatchError, replace_once
-from .extensions import extensions_methods as modules_methods
+from .modules import modules_methods
 
 REGISTERS_ANCHOR = '''\
 .method public onClick(Landroid/view/View;)V
@@ -1420,9 +1420,6 @@ def transform_settings_highlight(smali: str) -> str:
 # open rather than as a stolen install result.
 SAF_REQUEST = "0x4e58"
 
-PREFS_NAME = "nexus_extensions"
-PREFS_KEY = "uris"
-
 # GG's onActivityResult logs, calls super, then dispatches to the installer
 # when r.d is set. Our check goes in at the very top and returns early, so it
 # can never consume GG's result.
@@ -1451,7 +1448,7 @@ ONACTIVITYRESULT_NEW = f'''\
 
     if-eqz v0, :nexus_aar_gg
 
-    invoke-static {{p0, v0}}, Lorg/vekendian/nexus/extensions/NexusHost;->parkFromActivity(Landroid/app/Activity;Landroid/net/Uri;)V
+    invoke-static {{p0, v0}}, Lorg/vekendian/nexus/modules/NexusHost;->parkFromActivity(Landroid/app/Activity;Landroid/net/Uri;)V
 
     return-void
 
@@ -1465,7 +1462,7 @@ def transform_activity_result(smali: str) -> str:
 
 # ===== f.smali: the dialog factory delegates to the engine theme =====
 
-ENGINE = "Lorg/vekendian/nexus/extensions/NexusHost;"
+ENGINE = "Lorg/vekendian/nexus/modules/NexusHost;"
 
 # The dialog builder factory method c(Context) in f.smali must delegate to
 # NexusHost.dialogBuilder so that all dialogs get the Nexus theme.

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Inflated into nexus_extensions_list once per persisted extension.
+<!-- Inflated into nexus_extensions_list once per persisted module.
      Root is a card matching nexus_bg_card_sm, with the remove control in its
      top-right corner. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"

@@ -56,21 +56,21 @@ AUDITED = [
     "smali/android/ext/f.smali",
     "smali/android/ext/ConfigListAdapter.smali",
     "smali/org/vekendian/nexus/ModulePicker.smali",
-    "smali/org/vekendian/nexus/api/ExtensionApi.smali",
-    "smali/org/vekendian/nexus/api/ExtensionType.smali",
-    "smali/org/vekendian/nexus/api/ExtensionInfo.smali",
-    "smali/org/vekendian/nexus/api/ExtensionInfo$Type.smali",
-    "smali/org/vekendian/nexus/api/ExtensionManifest.smali",
+    "smali/org/vekendian/nexus/api/ModuleApi.smali",
+    "smali/org/vekendian/nexus/api/ModuleType.smali",
+    "smali/org/vekendian/nexus/api/ModuleInfo.smali",
+    "smali/org/vekendian/nexus/api/ModuleInfo$Type.smali",
+    "smali/org/vekendian/nexus/api/ModuleManifest.smali",
     "smali/org/vekendian/nexus/api/NexusExecutor.smali",
-    "smali/org/vekendian/nexus/extensions/NexusHost.smali",
-    "smali/org/vekendian/nexus/extensions/ExtensionApiImpl.smali",
-    "smali/org/vekendian/nexus/extensions/ExtensionCards.smali",
-    "smali/org/vekendian/nexus/extensions/ExtensionLoader.smali",
+    "smali/org/vekendian/nexus/modules/NexusHost.smali",
+    "smali/org/vekendian/nexus/modules/ModuleApiImpl.smali",
+    "smali/org/vekendian/nexus/modules/ModuleCards.smali",
+    "smali/org/vekendian/nexus/modules/ModuleLoader.smali",
     # The Lua namespaceTemplates are hand-written smali -- exactly the kind of
     # file the static audits exist for.
     "smali/org/vekendian/nexus/lua/NexusLua.smali",
-    "smali/org/vekendian/nexus/lua/NexusLua$Extensions.smali",
-    "smali/org/vekendian/nexus/lua/NexusLua$Extensions$Fn.smali",
+    "smali/org/vekendian/nexus/lua/NexusLua$Modules.smali",
+    "smali/org/vekendian/nexus/lua/NexusLua$Modules$Fn.smali",
     "smali/org/vekendian/nexus/lua/NexusLua$Perm.smali",
     "smali/org/vekendian/nexus/lua/NexusLua$Perm$Ask.smali",
 ]
@@ -78,8 +78,8 @@ AUDITED = [
 PICKER = "smali/org/vekendian/nexus/ModulePicker.smali"
 ENGINE_SHIPPED = [
     "smali/org/vekendian/nexus/ModulePicker.smali",
-    "smali/org/vekendian/nexus/extensions/NexusHost.smali",
-    "smali/org/vekendian/nexus/extensions/ExtensionLoader.smali",
+    "smali/org/vekendian/nexus/modules/NexusHost.smali",
+    "smali/org/vekendian/nexus/modules/ModuleLoader.smali",
 ]
 
 
@@ -538,14 +538,14 @@ def test_the_six_register_contentquery_is_gone_from_smali():
     (ScriptStore.displayNameOf), so there is no such call in smali at all --
     and if one comes back, it is hand-written again and will be wrong again.
     """
-    from nexus.extensions import extensions_methods as modules_methods
+    from nexus.modules import modules_methods
 
     class _I:
         def hex(self, name):
             return "0x0"
 
     assert "->query(" not in modules_methods(_I())
-    engine = (RES_DIR / "smali/org/vekendian/nexus/extensions").rglob("*.smali")
+    engine = (RES_DIR / "smali/org/vekendian/nexus/modules").rglob("*.smali")
     for f in engine:
         assert "->query(" not in f.read_text(encoding="utf-8"), f
 
@@ -557,7 +557,7 @@ def test_the_render_range_window_is_exact():
     this suite exists for, so the specific shape is pinned as well as checked
     generically above.
     """
-    from nexus.extensions import extensions_methods as modules_methods, RENDER_DESC, RENDER_REGISTERS
+    from nexus.modules import modules_methods, RENDER_DESC, RENDER_REGISTERS
 
     class _I:
         def hex(self, name):

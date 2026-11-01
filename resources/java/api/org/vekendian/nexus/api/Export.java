@@ -6,9 +6,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a method as exported to Lua via {@code nexus.extensions.import}.
+ * Marks a method as exported to Lua via {@code nexus.modules.import}.
  *
- * <p>Only methods on the entry class (declared by {@link ExtensionManifest#entry()})
+ * <p>Only methods on the entry class (declared by {@link ModuleManifest#entry()})
  * are scanned. The method must be public and non-static (or static — both work).
  * The return type and parameter types determine the marshalling protocol:
  * <ul>

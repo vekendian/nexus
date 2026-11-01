@@ -95,7 +95,7 @@
 .method public run()V
     .locals 4
 
-    invoke-static {}, Lorg/vekendian/nexus/extensions/NexusHost;->dialogBuilder()Landroid/app/AlertDialog$Builder;
+    invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->dialogBuilder()Landroid/app/AlertDialog$Builder;
 
     move-result-object v0
 
@@ -121,7 +121,7 @@
 
     iget-object v3, p0, Lorg/vekendian/nexus/lua/NexusLua$Perm$Ask;->op:Ljava/lang/String;
 
-    invoke-static {v1, v2, v3}, Lorg/vekendian/nexus/extensions/LuaBridge;->permMessage(ILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+    invoke-static {v1, v2, v3}, Lorg/vekendian/nexus/modules/LuaBridge;->permMessage(ILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 
     move-result-object v1
 

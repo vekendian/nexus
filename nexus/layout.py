@@ -680,7 +680,7 @@ DONATE_ROW_RE = re.compile(
     re.M)
 
 # The floating settings screen keeps the same row shape as GG's own actions.
-# Permissions and the two extension actions live in their own section, directly
+# Permissions and the two module actions live in their own section, directly
 # above GG's game settings. The main Settings panel no longer has a row.
 NEXUS_EXTENSIONS_SEPARATOR = ('<android.fix.TextView android:textAppearance="@style/Separator" '
                           'android:textColor="@color/nexus_on_orange" '
@@ -727,7 +727,7 @@ def _patch_root(xml: str, what: str, attrs: list) -> str:
 def transform_service_config(xml: str, bands: int = SERVICE_SEPARATOR_COUNT) -> str:
     """Remove donate, recolour GG's bands, and add the Nexus permissions group.
 
-    Permissions lives in a Nexus-owned group: its "Nexus extensions" band
+    Permissions lives in a Nexus-owned group: its "Nexus modules" band
     immediately above GG's game-settings band, instead of a row among GG's
     action rows. ConfigListAdapter dispatches the row by id; the section band
     itself has no id and is ignored by the click handler.

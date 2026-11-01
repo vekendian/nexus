@@ -1,11 +1,11 @@
-"""The EXTENSIONS tab: the SAF picker, the proxy activity, and the tab layout.
+"""The MODULES tab: the SAF picker, the proxy activity, and the tab layout.
 
 The engine itself (loading, registry, card binding) is Java and is asserted in
-tests/test_module_engine.py. What is left to assert here is the shape of the
+tests/test_modules_engine.py. What is left to assert here is the shape of the
 things this patcher owns: the three delegates in r.smali, the XML assets, and the
 proxy activity that makes the picker work at all.
 
-What these cannot assert: that the picker opens, or that an extension runs. That
+What these cannot assert: that the picker opens, or that a module runs. That
 needs a device.
 """
 
@@ -18,8 +18,8 @@ from pathlib import Path
 import pytest
 
 from nexus.layout import EXTENSIONS_FAB, PANEL_EXTENSIONS, transform_main
-from nexus.extensions import (API_PICKER, ENGINE, RENDER_DESC, RENDER_IDS,
-                              RENDER_REGISTERS, extensions_methods)
+from nexus.modules import (API_PICKER, ENGINE, RENDER_DESC, RENDER_IDS,
+                              RENDER_REGISTERS, modules_methods)
 from nexus.tree import RES_DIR
 
 ANDROID = "{http://schemas.android.com/apk/res/android}"
@@ -122,7 +122,7 @@ def test_fab_is_right_aligned_and_hidden_by_default():
     assert root.get(ANDROID + "clickable") == "true"
 
 
-def test_extensions_panel_has_a_list_container_and_empty_state():
+def test_modules_panel_has_a_list_container_and_empty_state():
     assert "@+id/nexus_extensions_list" in PANEL_EXTENSIONS
     assert "@+id/nexus_extensions_empty" in PANEL_EXTENSIONS
 
@@ -142,9 +142,9 @@ def test_card_layout_carries_all_four_fields():
 def test_card_meta_row_is_reachable_by_id():
     """The engine fills the meta row with the clean path; a renamed view would
     silently drop it rather than fail."""
-    src = _java("host/org/vekendian/nexus/extensions/NexusHost.java")
+    src = _java("host/org/vekendian/nexus/modules/NexusHost.java")
     assert "nexus_extension_meta" not in src, "ids arrive as arguments, not names"
-    out = extensions_methods(_ids())
+    out = modules_methods(_ids())
     assert "const v5, 0x7f050182" in out, "meta id is not loaded by the delegate"
 
 
@@ -163,7 +163,7 @@ def test_remove_control_is_a_sibling_not_a_child_of_the_text():
 def test_delegates_and_nothing_else():
     """r.smali keeps pick/boot/render + the permissions screen; the other 600
     lines moved to Java."""
-    raw = extensions_methods(_ids())
+    raw = modules_methods(_ids())
     for want in (".method private nexusExtensionsPick()V",
                  ".method private nexusExtensionsDrain()V",
                  ".method private nexusExtensionsRender()V"):
@@ -175,7 +175,7 @@ def test_delegates_and_nothing_else():
 
 
 def test_delegates_interpolate_ids_and_the_engine_descriptor():
-    out = _code_only(extensions_methods(_ids()))
+    out = _code_only(modules_methods(_ids()))
     assert "@@ID:" not in out and "@@ENGINE@@" not in out
     assert ENGINE in out
     assert "const v0, 0x7f080021" in out           # the raw asset id, into boot()
@@ -189,7 +189,7 @@ def test_render_delegate_uses_one_range_call_for_every_id():
     moved out of p0 first). tests/test_invoke_arity.py checks the span against the
     descriptor, so this only pins the intent.
     """
-    out = extensions_methods(_ids())
+    out = modules_methods(_ids())
     m = re.search(r"\.method private nexusExtensionsRender\(\)V\n\s+\.registers (\d+)", out)
     assert m, "render delegate must declare a frame"
     # p0 plus the range window v0..v(1 + len(RENDER_IDS)).
@@ -209,7 +209,7 @@ def test_render_delegate_uses_one_range_call_for_every_id():
 
 def test_pick_delegate_never_requests_a_result():
     """A singleInstance host cannot receive one; it launches a proxy instead."""
-    out = _code_only(extensions_methods(_ids()))
+    out = _code_only(modules_methods(_ids()))
     assert "startActivityForResult" not in out
     assert "->pick(Landroid/app/Activity;)V" in out
 
@@ -218,7 +218,7 @@ def test_picker_is_named_not_referenced():
     """The engine names the proxy by string, so no compile-time link exists
     between the Java host and a hand-written smali activity."""
     assert API_PICKER == "org.vekendian.nexus.ModulePicker"
-    src = _java("host/org/vekendian/nexus/extensions/NexusHost.java")
+    src = _java("host/org/vekendian/nexus/modules/NexusHost.java")
     assert f'PICKER_CLASS = "{API_PICKER}"' in src
     assert "i.setClassName(host, PICKER_CLASS);" in src
 
@@ -229,7 +229,7 @@ def test_permissions_dialog_uses_nexus_theme_and_overlay_type():
     """The row's Context is a Service wrapper with GG's old theme and no
     overlay window. The dialog must use NexusDialog from the application
     context and become an overlay window so it lands above the floating panel."""
-    src = (RES_DIR / "java/host/org/vekendian/nexus/extensions/NexusHost.java").read_text()
+    src = (RES_DIR / "java/host/org/vekendian/nexus/modules/NexusHost.java").read_text()
     start = src.index("private static Context dialogContext(")
     end = src.index("private static Button permissionButton", start)
     body = src[start:end]
@@ -246,7 +246,7 @@ def test_permissions_dialog_uses_nexus_theme_and_overlay_type():
     assert "NexusToast.show(" in src
 
 
-def test_the_extension_action_rows_are_gone():
+def test_the_module_action_rows_are_gone():
     """The autostart-start row and the stop-all row were removed: extensions
     manage their own lifecycle, and the settings screen only hosts
     Permissions. ConfigListAdapter must dispatch nothing else."""
@@ -399,7 +399,7 @@ def test_choice_buttons_have_a_selected_highlight():
     assert 'android:state_pressed="true"' in choice
     colors = (RES_DIR / "res/color/nexus_choice_text.xml").read_text()
     assert 'android:state_selected="true"' in colors
-    java = _java("host/org/vekendian/nexus/extensions/NexusHost.java")
+    java = _java("host/org/vekendian/nexus/modules/NexusHost.java")
     assert 'choice ? "nexus_bg_choice" : "nexus_bg_button"' in java
     assert 'resourceId(host, "nexus_choice_text", "color")' in java
     assert "allow[i].setSelected(on);" in java
@@ -419,7 +419,7 @@ def test_the_active_choice_is_the_one_that_looks_active():
     assert "@color/nexus_text" in unselected
     assert "@color/nexus_orange" not in unselected
 
-    java = _java("host/org/vekendian/nexus/extensions/NexusHost.java")
+    java = _java("host/org/vekendian/nexus/modules/NexusHost.java")
     # The footer buttons are actions: they get the tonal background, not the
     # choice background, and no check.
     assert "permissionButton(ui, r[3], false)" in java
@@ -434,13 +434,13 @@ def test_the_active_choice_is_the_one_that_looks_active():
 
 
 def test_the_autostart_flag_is_visible_on_the_card():
-    """Each extension card shows whether its manifest asks to autostart; the
+    """Each module card shows whether its manifest asks to autostart; the
     chip must name the flag it reports."""
-    java = _java("host/org/vekendian/nexus/extensions/NexusHost.java")
+    java = _java("host/org/vekendian/nexus/modules/NexusHost.java")
     assert "s.autostart()" in java
     assert "nexus_str_extension_autostart" in java
     # The status line is coloured by state, not left grey for everything.
-    assert "static int statusColor(Context host, ExtensionInfo s)" in java
+    assert "static int statusColor(Context host, ModuleInfo s)" in java
     assert 'color(host, "nexus_ok")' in java
     assert 'color(host, "nexus_bad")' in java
 
@@ -456,7 +456,7 @@ def test_every_gg_dialog_builder_is_themed():
     assert ("NexusHost;->dialogBuilder(Landroid/content/Context;)"
             "Landroid/app/AlertDialog$Builder;") in out
     assert "new-instance v0, Landroid/app/AlertDialog$Builder;" not in out
-    java = _java("host/org/vekendian/nexus/extensions/NexusHost.java")
+    java = _java("host/org/vekendian/nexus/modules/NexusHost.java")
     assert "public static AlertDialog.Builder dialogBuilder(Context base)" in java
     assert "new AlertDialog.Builder(themedContext(base))" in java
 
@@ -553,11 +553,11 @@ def test_navbar_and_fab_are_sibling_rows_of_starter():
 
 # ------------------------------------------------------- engine call order ---
 
-def test_boot_drains_the_parked_uri_before_starting_extensions():
+def test_boot_drains_the_parked_uri_before_starting_modules():
     """Regression shape from the pre-engine code: the parked Uri was consumed
     after being cleared, so a re-entrant resume could not import it twice. The
     order has to survive the move to Java."""
-    src = _java("host/org/vekendian/nexus/extensions/NexusHost.java")
+    src = _java("host/org/vekendian/nexus/modules/NexusHost.java")
     body = src[src.index("public static void boot("):]
     body = body[:body.index("\n    }")]
     clear = body.index("pending = null;")
@@ -566,9 +566,9 @@ def test_boot_drains_the_parked_uri_before_starting_extensions():
     assert body.rindex("powerOn();") > add, "import first, then autostart"
 
 
-def test_empty_state_is_driven_by_extension_count_not_by_the_registry():
+def test_empty_state_is_driven_by_module_count_not_by_the_registry():
     """The registry's own card is infrastructure; 'no extensions' must mean the
     user has none, not that the loader failed."""
-    src = _java("host/org/vekendian/nexus/extensions/NexusHost.java")
+    src = _java("host/org/vekendian/nexus/modules/NexusHost.java")
     assert "count == 0 ? View.VISIBLE" in src
     assert "empty.setVisibility" in src

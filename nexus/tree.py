@@ -120,22 +120,99 @@ def copy_smali(tree: Path) -> None:
     "already exists -- tree may be rebranded", because it cannot tell our
     classes apart from GG's.
 
+    Also copies the luajava/pivot port in resources/smali_luajava (see
+    copy_luajava) into the same primary root.
+
     Only the primary root: GG is single-dex, and copying the same class into
     every root would be a duplicate-definition build error the moment it ships
     more than one.
     """
     src = RES_DIR / "smali"
+    if src.is_dir():
+        shutil.copytree(src, tree / "smali", dirs_exist_ok=True)
+        # The init probe is a diagnostic, not a feature: it deliberately calls
+        # findViewById on an id it expects to be ABSENT, so shipping it would trip
+        # the reachability audit and add a class nothing can reach. Only present
+        # when NEXUS_DIAG=1 asked for it.
+        if not diag_enabled():
+            stale = tree / "smali" / "org" / "vekendian" / "nexus" / "Diag.smali"
+            if stale.is_file():
+                stale.unlink()
+    copy_luajava(tree)
+
+
+_CLASS_RE = re.compile(r"^\.class\s+(?:[\w.]+\s+)*(L[^;]+;)", re.M)
+
+
+def _class_of(path: Path) -> str | None:
+    """The descriptor a smali file declares, or None if unreadable."""
+    try:
+        head = path.read_text(encoding="utf-8", errors="replace")[:4096]
+    except OSError:
+        return None
+    m = _CLASS_RE.search(head)
+    return m.group(1) if m else None
+
+
+def copy_luajava(tree: Path) -> None:
+    """Copy resources/smali_luajava into the primary root, refusing collisions.
+
+    The port adds classes to packages GG already owns -- luaj/, lasm/ and
+    android/{c,ext}. Two failure modes are unrecoverable after the fact, so both
+    are refused here rather than discovered at build time:
+
+      * **path collision** -- a file landing on top of an existing one silently
+        deletes a GG class (or, on a re-run, its own twin);
+      * **descriptor collision** -- two files declaring the same class from
+        different paths is a duplicate-definition build error, the kind apktool
+        reports only after smali has already run.
+
+    A byte-identical file already in the tree is neither failure: it is the
+    re-run case, and is skipped so the audit stays idempotent.
+    """
+    src = RES_DIR / "smali_luajava"
     if not src.is_dir():
         return
-    shutil.copytree(src, tree / "smali", dirs_exist_ok=True)
-    # The init probe is a diagnostic, not a feature: it deliberately calls
-    # findViewById on an id it expects to be ABSENT, so shipping it would trip
-    # the reachability audit and add a class nothing can reach. Only present
-    # when NEXUS_DIAG=1 asked for it.
-    if not diag_enabled():
-        stale = tree / "smali" / "org" / "vekendian" / "nexus" / "Diag.smali"
-        if stale.is_file():
-            stale.unlink()
+    dst = tree / "smali"
+    if not dst.is_dir():
+        raise PatchError(f"{dst} missing: cannot place smali_luajava additions")
+
+    existing = {p.relative_to(dst).as_posix(): p for p in dst.rglob("*.smali")}
+    described = set()
+    for rel, p in existing.items():
+        d = _class_of(p)
+        if d:
+            described.add(d)
+
+    checked = 0
+    added = 0
+    for p in sorted(src.rglob("*.smali")):
+        rel = p.relative_to(src).as_posix()
+        checked += 1
+        hit = existing.get(rel)
+        if hit is not None:
+            try:
+                same = hit.read_bytes() == p.read_bytes()
+            except OSError:
+                same = False
+            if same:
+                continue          # already in the tree from a previous run
+            raise PatchError(
+                f"smali_luajava/{rel} would overwrite the existing smali/{rel} "
+                f"rather than add a class")
+        desc = _class_of(p)
+        if desc and desc in described:
+            raise PatchError(
+                f"smali_luajava/{rel} declares {desc}, which another file in "
+                f"the tree already defines (duplicate-definition build error)")
+        existing[rel] = p
+        if desc:
+            described.add(desc)
+        added += 1
+
+    shutil.copytree(src, dst, dirs_exist_ok=True)
+    print(f"smali_luajava: {added} class(es) copied, "
+          f"{checked - added} already present, 0 collisions")
 
 
 def default_output(tree: Path) -> Path:

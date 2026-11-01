@@ -6,7 +6,7 @@
 # The permission gate for every nexus.* call that needs a grant.
 #
 # The policy itself (what is granted, how keys are matched, why a stored denial
-# cannot exist) lives in Java: org.vekendian.nexus.extensions.PermRules, reached
+# cannot exist) lives in Java: org.vekendian.nexus.modules.PermRules, reached
 # through LuaBridge.policy/remember. This class is the blocking half: build an
 # Ask, post it to the main thread, park the script thread until the dialog
 # closes or the timeout fires, then let the Ask report what happened.
@@ -26,7 +26,7 @@
 .method public static check(Ljava/lang/String;Ljava/lang/String;)Z
     .locals 7
 
-    invoke-static {p0, p1}, Lorg/vekendian/nexus/extensions/LuaBridge;->policy(Ljava/lang/String;Ljava/lang/String;)I
+    invoke-static {p0, p1}, Lorg/vekendian/nexus/modules/LuaBridge;->policy(Ljava/lang/String;Ljava/lang/String;)I
 
     move-result v0
 
@@ -65,7 +65,7 @@
 
     if-eqz v6, :granted
 
-    invoke-static {p0, p1}, Lorg/vekendian/nexus/extensions/LuaBridge;->remember(Ljava/lang/String;Ljava/lang/String;)V
+    invoke-static {p0, p1}, Lorg/vekendian/nexus/modules/LuaBridge;->remember(Ljava/lang/String;Ljava/lang/String;)V
 
     :granted
     const/4 v0, 0x1

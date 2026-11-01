@@ -31,7 +31,7 @@ from .luapatch import (HELP_ANCHOR as LUA_HELP_ANCHOR,
                        tree_files as lua_tree_files)
 from .manifest import (APP_NAME_NEW, APP_NAME_OLD, NEW_VERSION_NAME, PKG_NEW,
                         PKG_OLD, SMALI_NEW, SMALI_OLD)
-from .extensions import ENGINE as ENGINE_HOST
+from .modules import ENGINE as ENGINE_HOST
 from .smali import (ARRAY_ANCHOR, CONFIG_ADAPTER, COUNT_ANCHOR, COUNT_NEW,
                     DOWNLOAD_URL_NEW, DOWNLOAD_URL_OLD, KBD_GRAVITY_ANCHOR,
                     KBD_GRAVITY_NEW, KBD_LAYOUT_ANCHOR,
@@ -52,19 +52,19 @@ MARKER = "nexus_tab_home"  # smali const added by the patch => idempotency
 ENGINE_ASSET = "res/raw/ydw_nexus_dexexec"
 ENGINE_SMALI = (
     "smali/org/vekendian/nexus/ModulePicker.smali",
-    "smali/org/vekendian/nexus/api/ExtensionApi.smali",
+    "smali/org/vekendian/nexus/api/ModuleApi.smali",
     "smali/org/vekendian/nexus/api/NexusExecutor.smali",
-    "smali/org/vekendian/nexus/api/ExtensionManifest.smali",
-    "smali/org/vekendian/nexus/api/ExtensionInfo.smali",
-    "smali/org/vekendian/nexus/api/ExtensionType.smali",
-    "smali/org/vekendian/nexus/extensions/NexusHost.smali",
-    "smali/org/vekendian/nexus/extensions/ExtensionApiImpl.smali",
-    "smali/org/vekendian/nexus/extensions/ExtensionCards.smali",
-    "smali/org/vekendian/nexus/extensions/ExtensionLoader.smali",
-    "smali/org/vekendian/nexus/extensions/PermRules.smali",
-    "smali/org/vekendian/nexus/extensions/LuaPerms.smali",
-    "smali/org/vekendian/nexus/extensions/LuaBridge.smali",
-    "smali/org/vekendian/nexus/extensions/LuaExtensions.smali",
+    "smali/org/vekendian/nexus/api/ModuleManifest.smali",
+    "smali/org/vekendian/nexus/api/ModuleInfo.smali",
+    "smali/org/vekendian/nexus/api/ModuleType.smali",
+    "smali/org/vekendian/nexus/modules/NexusHost.smali",
+    "smali/org/vekendian/nexus/modules/ModuleApiImpl.smali",
+    "smali/org/vekendian/nexus/modules/ModuleCards.smali",
+    "smali/org/vekendian/nexus/modules/ModuleLoader.smali",
+    "smali/org/vekendian/nexus/modules/PermRules.smali",
+    "smali/org/vekendian/nexus/modules/LuaPerms.smali",
+    "smali/org/vekendian/nexus/modules/LuaBridge.smali",
+    "smali/org/vekendian/nexus/modules/LuaModules.smali",
 )
 
 # 15 ids that must exist (main.xml contract, y(true) findViewById loop + z()).
@@ -144,7 +144,7 @@ def preflight(tree: Path, ids: Ids, profile=None) -> list:
         if _kind == "string" and _name not in _nexus_strings:
             errors.append(f"nexus_strings.xml: missing definition for {_name}")
 
-    # The extension engine ships as generated smali plus one dex asset. Both are
+    # The module engine ships as generated smali plus one dex asset. Both are
     # produced by build-engine.sh; their absence means the committed build is
     # stale, which would otherwise show up as an empty EXTENSIONS tab on device.
     for _rel in ENGINE_SMALI:
@@ -641,7 +641,7 @@ def postflight(tree: Path, ids: Ids, src: Path | None = None, profile=None) -> l
                 or "sswitch_nexus_extensions_stop" in _cax \
                 or "NexusHost;->runAutostart" in _cax \
                 or "NexusHost;->confirmStopAllModules" in _cax:
-            errors.append("ConfigListAdapter: dead extension rows must not be dispatched")
+            errors.append("ConfigListAdapter: dead module rows must not be dispatched")
         if "sswitch_nexus_permissions" not in _cax:
             errors.append("ConfigListAdapter: permissions case missing")
         if "Landroid/ext/r;->nexusPermissionsOpen(Landroid/content/Context;)V" not in _cax:
@@ -827,7 +827,7 @@ def postflight(tree: Path, ids: Ids, src: Path | None = None, profile=None) -> l
     # back, the engine is being bypassed.
     for _m in ("nexusExtensionsPick", "nexusExtensionsDrain", "nexusExtensionsRender"):
         if f".method private {_m}(" not in smali:
-            errors.append(f"r.smali: extension delegate {_m} missing")
+            errors.append(f"r.smali: module delegate {_m} missing")
     if ".method public static nexusPermissionsOpen(Landroid/content/Context;)V" not in smali:
         errors.append("r.smali: permissions launcher missing")
     for _m in ("nexusExtensionsAdd", "nexusExtensionsRemove", "nexusExtensionsCard",
@@ -848,7 +848,7 @@ def postflight(tree: Path, ids: Ids, src: Path | None = None, profile=None) -> l
     # NexusHost (the single call site), and powerOff stays declared on the
     # generated host even though no settings row reaches it. r.smali must not
     # call either -- it keeps pick/boot/render/park/permissions, nothing else.
-    _engine_host = tree / "smali/org/vekendian/nexus/extensions/NexusHost.smali"
+    _engine_host = tree / "smali/org/vekendian/nexus/modules/NexusHost.smali"
     if _engine_host.is_file():
         _engine = _engine_host.read_text()
         if _engine.count(f"{ENGINE_HOST}->powerOn()V") != 1:
