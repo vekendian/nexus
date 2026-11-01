@@ -36,5 +36,5 @@ dist/
 .opencode/
 tools/checkers/
 
-# Untracked working note
-docs/plans/2026-10-30-nexus-link-agent-server.md
+# Local working plans; docs/other_thing stays tracked
+docs/plans/
