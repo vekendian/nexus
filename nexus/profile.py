@@ -20,7 +20,6 @@ orange" is a decision and belongs in the transform.
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 from .anchors import PatchError
@@ -79,11 +78,11 @@ class Profile:
             if path.is_file():
                 return cls.load(path)
         # Fallback to the known working profile
-        path = PROFILE_DIR / "gg-499.2.json"
+        path = PROFILE_DIR / "gg-101.4.json"
         if path.is_file():
             return cls.load(path)
         raise PatchError(
-            f"no profile for GameGuardian {release}. Expected {PROFILE_DIR}/gg-499.2.json")
+            f"no profile for GameGuardian {release}. Expected {PROFILE_DIR}/gg-101.4.json")
 
     # -- lookups ----------------------------------------------------------
 
@@ -142,15 +141,10 @@ class Profile:
 
 
 def gg_version_from_tree(tree: Path) -> str:
-    """The version string a tree declares, for picking a profile."""
-    for rel, pattern in (
-            ("apktool.json", r'"versionName":\s*"([^"]+)"'),
-            ("apktool.yml", r"versionName:\s*['\"]?([^\s'\"]+)"),
-            ("AndroidManifest.xml", r'android:versionName="([^"]+)"')):
-        path = tree / rel
-        if not path.is_file():
-            continue
-        m = re.search(pattern, path.read_text(encoding="utf-8"))
-        if m:
-            return m.group(1)
-    return "unknown"
+    """The version string a tree declares, for picking a profile.
+
+    Delegates to the tree reader so the patcher has one answer to "which
+    release is this?" -- GameGuardian's manifest versionName is stale.
+    """
+    from .tree import detect_version
+    return detect_version(tree)

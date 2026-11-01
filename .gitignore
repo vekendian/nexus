@@ -21,3 +21,20 @@ dist/
 .vscode/
 .DS_Store
 *.swp
+
+# Local scratch: Eclipse probe, hand-run module tests, captured logs
+/Eclipse.dex
+/eclipse.lua
+/eclipse_output.txt
+/example.lua
+/test.lua
+/test_output.txt
+/luajava_port_test.lua
+/toarray_probe.lua
+
+# Local agent state and one-off audit scripts
+.opencode/
+tools/checkers/
+
+# Untracked working note
+docs/plans/2026-10-30-nexus-link-agent-server.md

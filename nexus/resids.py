@@ -118,7 +118,7 @@ def audit_pin_ceiling(tree: Path, pinned: list) -> list:
     """Every pin must sit above everything the *target* tree already uses.
 
     This is the version-drift guard. `nexus_ids.json` was written against GG
-    499.2; the tree it is applied to may be any release. Rather than trusting
+    101.4; the tree it is applied to may be any release. Rather than trusting
     the recorded numbers, the ceiling is recomputed from the tree being patched,
     so a release that grew past a pinned slot fails here instead of producing an
     APK where a GG view and a Nexus view share one number.

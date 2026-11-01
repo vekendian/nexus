@@ -82,11 +82,21 @@ def smali_roots(tree: Path) -> list:
 
 
 def detect_version(tree: Path) -> str:
-    """Best-effort GG version for display: apktool.json, then .yml, then manifest.
+    """Best-effort GG version for display: the tree's own version_number
+    string, then apktool.json, then apktool.yml.
 
-    Only used for human-readable output and the lock file's drift note, so it
-    degrades to "unknown" rather than raising.
+    GameGuardian's AndroidManifest carries a stale versionName, so it is not
+    read: the app's About screen shows res/values/strings.xml's version_number,
+    and that is the release the tree actually is. Only used for human-readable
+    output and the lock file's drift note, so it degrades to "unknown" rather
+    than raising.
     """
+    strings = tree / "res/values/strings.xml"
+    if strings.is_file():
+        m = re.search(r'<string name="version_number">([^<]*)</string>',
+                      strings.read_text(encoding="utf-8"))
+        if m:
+            return m.group(1)
     j = tree / "apktool.json"
     if j.is_file():
         m = re.search(r'"versionName":\s*"([^"]+)"', j.read_text(encoding="utf-8"))
@@ -96,12 +106,6 @@ def detect_version(tree: Path) -> str:
     if yml.is_file():
         m = re.search(r"versionName:\s*['\"]?([^\s'\"]+)",
                       yml.read_text(encoding="utf-8"))
-        if m:
-            return m.group(1)
-    manifest = tree / "AndroidManifest.xml"
-    if manifest.is_file():
-        m = re.search(r'android:versionName="([^"]+)"',
-                      manifest.read_text(encoding="utf-8"))
         if m:
             return m.group(1)
     return "unknown"

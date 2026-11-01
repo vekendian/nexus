@@ -23,14 +23,15 @@
 </td></tr></table>
 </div>
 
-Re-skins GameGuardian as **Nexus** on any apktool-decoded GG tree: navbar and
+Mods GameGuardian into **Nexus** on an apktool-decoded GG 101.4 tree: navbar and
 card panels, a power card, an ENVIRONMENT readout, localised settings rows, a
 modern dialog theme, a restyled keyboard, a Nexus-branded floating interface
 (the icon, its speed controls and the time-jump panel, all of which sit over a
 game screen), and a rebrand to `org.vekendian.nexus` v1.0.0.
 
-Bring your own GG APK. The patcher makes no network calls and never
-modifies the tree you point it at.
+Bring your own GameGuardian 101.4 APK — that is the only release Nexus
+currently targets, because every edit anchors on exact blocks from it. The
+patcher makes no network calls and never modifies the tree you point it at.
 
 ---
 
@@ -39,7 +40,7 @@ modifies the tree you point it at.
 ```bash
 # 1. decode. apktool 2.8.1 is the pinned decoder; pass the aapt2 you want
 #    used, because `aapt2` on PATH is not always runnable.
-java -jar tools/apktool-2.8.1.jar d -f -s gg-499.2.apk -o gg_src
+java -jar tools/apktool-2.8.1.jar d -f -s gg-101.4.apk -o gg_src
 
 # 2. sanity-check the tree without modifying anything
 python3 nexus.py check --src gg_src
@@ -135,6 +136,7 @@ nexus/
   manifest.py         rebrand: package, label, version
   checks.py           preflight / postflight / ID audit
   tree.py             resolve_tree, output clone, read/write
+profiles/             one JSON per GG release; gg-101.4.json is the current one
 nexus_ids.json        pinned IDs + observed GG bindings
 resources/res/        static drawables, values, icons
 tests/                pytest suite + fixtures

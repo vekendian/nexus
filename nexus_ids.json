@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "gg_release": "499.2",
+  "gg_release": "101.4",
   "comment": [
     "Pinned Nexus IDs. These are deliberately fixed rather than auto-assigned so",
     "that smali stays byte-stable across rebuilds. If a future GG release reaches",
     "this range, preflight reports a collision and they must be bumped here.",
     "",
-    "gg_observed is a RECORD of what GG 499.2 used for the views Nexus binds to.",
+    "gg_observed is a RECORD of what GG 101.4 used for the views Nexus binds to.",
     "It is not the source of truth: ids.gg(name) resolves by NAME from the tree's",
     "public.xml at apply time, so a weekly GG release that renumbers works",
     "automatically. The recorded hex only lets `ids` report drift.",
