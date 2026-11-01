@@ -6,6 +6,9 @@
     "itself is here: where its files are, what its views are called, how many",
     "of something it has. Everything Nexus decides is in the transforms.",
     "",
+    "The package name is deliberately absent: GameGuardian randomizes it per",
+    "build, so the patcher reads it from AndroidManifest.xml.",
+    "",
     "To port Nexus to a new GameGuardian release, copy this file to",
     "gg-<version>.json and correct what changed. A release that renumbered",
     "its views needs no change at all: the ids are resolved by name from the",
@@ -15,7 +18,6 @@
     "that carries GameGuardian's numbers, so a release that renumbers does",
     "not break the patch."
   ],
-  "package": "com.scmq",
   "app_name": "GameGuardian",
   "files": {
     "main_activity": "smali/android/ext/r.smali",

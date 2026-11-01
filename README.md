@@ -27,7 +27,8 @@ Mods GameGuardian into **Nexus** on an apktool-decoded GG 101.4 tree: navbar and
 card panels, a power card, an ENVIRONMENT readout, localised settings rows, a
 modern dialog theme, a restyled keyboard, a Nexus-branded floating interface
 (the icon, its speed controls and the time-jump panel, all of which sit over a
-game screen), and a rebrand to `org.vekendian.nexus` v1.0.0.
+game screen), and a rebrand to `org.vekendian.nexus` v1.0.0 (the source
+package is read from the tree — GameGuardian randomizes it per build).
 
 Bring your own GameGuardian 101.4 APK — that is the only release Nexus
 currently targets, because every edit anchors on exact blocks from it. The

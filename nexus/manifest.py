@@ -1,6 +1,8 @@
 """Rebrand: package name, launcher label, version.
 
-com.scmq -> org.vekendian.nexus, launcher label -> Nexus, version -> 1.0.0/1.
+The tree's declared package -> org.vekendian.nexus, launcher label -> Nexus,
+version -> 1.0.0/1. The package is read from the tree because GameGuardian
+randomizes it per build.
 
 The application label in GG is an obfuscated literal (e.g. "Kujtnodnookc") that
 changes every release, so it is matched by regex on the <application> tag rather
@@ -14,21 +16,19 @@ import shutil
 from pathlib import Path
 
 from .anchors import PatchError, replace_once
-from .tree import read, smali_roots, write
+from .tree import detect_package, read, smali_roots, write
 
-PKG_OLD = "com.scmq"
 PKG_NEW = "org.vekendian.nexus"
-SMALI_OLD = "Lcom/scmq/"
-SMALI_NEW = "Lorg/vekendian/nexus/"
-# GG also carries the package as a *descriptor literal* -- "Lcom/scmq;" -- which
+PKG_NEW_PATH = PKG_NEW.replace(".", "/")
+SMALI_NEW = f"L{PKG_NEW_PATH}/"
+# GG also carries the package as a *descriptor literal* -- "L<package>;" -- which
 # the slash-form replace below does not match. android/ext/i.smali uses it in the
 # <clinit> fallback that rebuilds the package name at runtime:
 #     literal.length() - pkg.length()   ->   literal.substring(0, that)
-# Leaving it behind is not cosmetic. "Lcom/scmq;" is 11 characters and
-# "org.vekendian.nexus" is 20, so the fallback computes a negative length and
+# Leaving it behind is not cosmetic: the old descriptor is shorter than
+# "Lorg/vekendian/nexus;", so the fallback computes a negative length and
 # String.substring throws instead of recovering.
-DESCRIPTOR_OLD = '"Lcom/scmq;"'
-DESCRIPTOR_NEW = '"Lorg/vekendian/nexus;"'
+DESCRIPTOR_NEW = f'"L{PKG_NEW_PATH};"'
 APP_NAME_OLD = '<string name="app_name">GameGuardian</string>'
 APP_NAME_NEW = '<string name="app_name">Nexus</string>'
 NEW_VERSION_NAME = "1.0.0"
@@ -66,10 +66,11 @@ def replace_in_smali(tree: Path, old: str, new: str) -> int:
     return hits
 
 
-def transform_manifest_identity(manifest: str) -> str:
-    if f'package="{PKG_OLD}"' not in manifest:
-        raise PatchError(f'manifest package is not "{PKG_OLD}" (already rebranded?)')
-    manifest = manifest.replace(PKG_OLD, PKG_NEW)
+def transform_manifest_identity(manifest: str, old_pkg: str) -> str:
+    if f'package="{old_pkg}"' not in manifest:
+        raise PatchError(
+            f'manifest package is not "{old_pkg}" (already rebranded?)')
+    manifest = manifest.replace(old_pkg, PKG_NEW)
     manifest, cnt = re.subn(
         r'(<application\b[^>]*?android:label=")[^"]*(")',
         r"\g<1>Nexus\2", manifest, count=1)
@@ -148,32 +149,43 @@ def set_yml_version(yml: str) -> str:
 
 
 def rebrand(tree: Path) -> None:
-    """com.scmq -> org.vekendian.nexus, label -> Nexus, version -> 1.0.0/1."""
+    """<declared package> -> org.vekendian.nexus, label -> Nexus, version -> 1.0.0/1.
+
+    The source package is read from the tree: GameGuardian randomizes it per
+    build, so a literal here would only work on the release it came from.
+    """
+    old_pkg = detect_package(tree)
+    if old_pkg == PKG_NEW:
+        raise PatchError(f"tree is already rebranded to {PKG_NEW}")
+    old_path = old_pkg.replace(".", "/")
     moved = 0
     for root in smali_roots(tree):
-        src = root / "com" / "scmq"
+        src = root / old_path
         if not src.is_dir():
             continue
-        dst = root / "org" / "vekendian" / "nexus"
+        dst = root / PKG_NEW_PATH
         if dst.exists():
             raise PatchError(f"{dst} already exists — tree may be rebranded")
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(src), str(dst))
         moved += 1
         try:
-            src.parent.rmdir()  # prune empty com/
+            src.parent.rmdir()  # prune the now-empty parent
         except OSError:
             pass
     if moved == 0:
-        raise PatchError("smali/com/scmq not found in any smali root")
-    if replace_in_smali(tree, SMALI_OLD, SMALI_NEW) == 0:
-        raise PatchError("no smali file contained Lcom/scmq/ after the move")
-    # The descriptor literal is a separate token; see DESCRIPTOR_OLD. Rewriting
-    # it is required for correctness (i.smali's <clinit> length arithmetic) and
-    # the count is reported so a GG release that drops the literal is noticed.
-    replace_in_smali(tree, DESCRIPTOR_OLD, DESCRIPTOR_NEW)
+        raise PatchError(f"smali/{old_path} not found in any smali root")
+    if replace_in_smali(tree, f"L{old_path}/", SMALI_NEW) == 0:
+        raise PatchError(
+            f"no smali file contained L{old_path}/ after the move")
+    # The descriptor literal is a separate token; see the note at the top.
+    # Rewriting it is required for correctness (i.smali's <clinit> length
+    # arithmetic) and the count is reported so a GG release that drops the
+    # literal is noticed.
+    replace_in_smali(tree, f'"L{old_path};"', DESCRIPTOR_NEW)
     write(tree, "AndroidManifest.xml",
-          transform_manifest_identity(read(tree, "AndroidManifest.xml")))
+          transform_manifest_identity(
+              read(tree, "AndroidManifest.xml"), old_pkg))
     strings = tree / "res/values/strings.xml"
     if strings.is_file():
         txt = strings.read_text(encoding="utf-8")

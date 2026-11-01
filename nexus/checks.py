@@ -30,7 +30,7 @@ from .luapatch import (HELP_ANCHOR as LUA_HELP_ANCHOR,
                        template_tokens, templates as lua_templates,
                        tree_files as lua_tree_files)
 from .manifest import (APP_NAME_NEW, APP_NAME_OLD, NEW_VERSION_NAME, PKG_NEW,
-                        PKG_OLD, SMALI_NEW, SMALI_OLD)
+                        SMALI_NEW)
 from .modules import ENGINE as ENGINE_HOST
 from .smali import (ARRAY_ANCHOR, CONFIG_ADAPTER, COUNT_ANCHOR, COUNT_NEW,
                     DOWNLOAD_URL_NEW, DOWNLOAD_URL_OLD, KBD_GRAVITY_ANCHOR,
@@ -41,8 +41,8 @@ from .smali import (ARRAY_ANCHOR, CONFIG_ADAPTER, COUNT_ANCHOR, COUNT_NEW,
                     RESUME_ANCHOR, RESUME_NEW,
                     SETTINGS_HIGHLIGHT_ANCHOR, SETTINGS_HIGHLIGHT_NEW,
                     SWITCH_ANCHOR, Z_ANCHOR, Z_NEW, set_empty_view_pattern)
-from .tree import (RES_DIR, detect_version, icon_resource_files, read, smali_roots,
-                  ui_enabled)
+from .tree import (RES_DIR, detect_package, detect_version, icon_resource_files,
+                  read, smali_roots, ui_enabled)
 
 MARKER = "nexus_tab_home"  # smali const added by the patch => idempotency
 
@@ -419,14 +419,23 @@ def preflight(tree: Path, ids: Ids, profile=None) -> list:
         if not (RES_DIR / rel).is_file():
             errors.append(f"icon override missing: {RES_DIR / rel}")
 
-    # rebrand anchors
-    if not (tree / "smali" / "com" / "scmq").is_dir():
-        errors.append("rebrand: smali/com/scmq missing (already rebranded?)")
+    # rebrand anchors. The package comes from the tree: GG randomizes it per
+    # build, so there is no literal to compare against.
+    manifest = read(tree, "AndroidManifest.xml")
+    try:
+        old_pkg = detect_package(tree)
+    except PatchError as e:
+        old_pkg = None
+        errors.append(f"rebrand: {e}")
+    if old_pkg is not None:
+        old_path = old_pkg.replace(".", "/")
+        if not (tree / "smali" / old_path).is_dir():
+            errors.append(
+                f"rebrand: smali/{old_path} missing (already rebranded?)")
+        if f'package="{old_pkg}"' not in manifest:
+            errors.append(f"rebrand: manifest package is not {old_pkg}")
     if SMALI_NEW in read(tree, "smali/android/ext/r.smali"):
         errors.append("rebrand: Lorg/vekendian/nexus/ already present (already rebranded?)")
-    manifest = read(tree, "AndroidManifest.xml")
-    if f'package="{PKG_OLD}"' not in manifest:
-        errors.append(f"rebrand: manifest package is not {PKG_OLD}")
     if not re.search(r"<application\b[^>]*android:label=", manifest, re.DOTALL):
         errors.append("rebrand: application android:label not found in manifest")
     if manifest.count('android:label="Game"') != 2:
@@ -507,8 +516,14 @@ def postflight(tree: Path, ids: Ids, src: Path | None = None, profile=None) -> l
     # not leave any smali constant pointing at a view its layout does not
     # declare. Both are diffed against the source tree, because GG's own code has
     # eleven deliberately-null-tolerant findViewById calls that are not defects.
+    old_pkg = None
+    if src is not None and src.is_dir():
+        try:
+            old_pkg = detect_package(src)
+        except PatchError:
+            old_pkg = None
     errors.extend(audit_collisions(tree, ids.pinned_table()))
-    errors.extend(audit_rebrand_complete(tree))
+    errors.extend(audit_rebrand_complete(tree, old_pkg))
     if src is not None and src.is_dir():
         errors.extend(audit_id_drift(src, tree))
         errors.extend(audit_findviewid_layouts(src, tree))
@@ -1072,8 +1087,8 @@ def postflight(tree: Path, ids: Ids, src: Path | None = None, profile=None) -> l
     manifest = read(tree, "AndroidManifest.xml")
     if f'package="{PKG_NEW}"' not in manifest:
         errors.append(f"manifest package is not {PKG_NEW}")
-    if PKG_OLD in manifest:
-        errors.append("manifest still contains com.scmq")
+    if old_pkg is not None and old_pkg in manifest:
+        errors.append(f"manifest still contains {old_pkg}")
     if 'android:label="Nexus"' not in manifest:
         errors.append("manifest application label is not Nexus")
     if manifest.count('android:label="Game"') != 0:
@@ -1086,13 +1101,17 @@ def postflight(tree: Path, ids: Ids, src: Path | None = None, profile=None) -> l
         errors.append("ActivityMain still has a LAUNCHER intent-filter")
     if not (tree / "smali/org/vekendian/nexus/R.smali").is_file():
         errors.append("smali/org/vekendian/nexus/R.smali missing (move failed)")
-    if (tree / "smali/com/scmq").exists():
-        errors.append("smali/com/scmq still exists (move failed)")
-    for root in smali_roots(tree):
-        if any(SMALI_OLD in f.read_text(encoding="utf-8")
-               for f in root.rglob("*.smali") if f.stat().st_size < 2_000_000):
-            errors.append(f"Lcom/scmq/ still present under {root.name}/")
-            break
+    if old_pkg is not None:
+        old_path = old_pkg.replace(".", "/")
+        old_descriptor = f"L{old_path}/"
+        if (tree / "smali" / old_path).exists():
+            errors.append(f"smali/{old_path} still exists (move failed)")
+        for root in smali_roots(tree):
+            if any(old_descriptor in f.read_text(encoding="utf-8")
+                   for f in root.rglob("*.smali")
+                   if f.stat().st_size < 2_000_000):
+                errors.append(f"{old_descriptor} still present under {root.name}/")
+                break
     strings = tree / "res/values/strings.xml"
     if strings.is_file() and APP_NAME_NEW not in strings.read_text(encoding="utf-8"):
         errors.append("strings.xml app_name is not Nexus")

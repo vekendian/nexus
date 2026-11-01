@@ -87,9 +87,10 @@ def detect_version(tree: Path) -> str:
 
     GameGuardian's AndroidManifest carries a stale versionName, so it is not
     read: the app's About screen shows res/values/strings.xml's version_number,
-    and that is the release the tree actually is. Only used for human-readable
-    output and the lock file's drift note, so it degrades to "unknown" rather
-    than raising.
+    and that is the release the tree actually is. apktool's metadata copies the
+    same manifest value, so it is only a fallback for trees without the string.
+    Only used for human-readable output and the lock file's drift note, so it
+    degrades to "unknown" rather than raising.
     """
     strings = tree / "res/values/strings.xml"
     if strings.is_file():
@@ -111,6 +112,34 @@ def detect_version(tree: Path) -> str:
     return "unknown"
 
 
+def detect_package(tree: Path) -> str:
+    """The application package the tree declares.
+
+    GameGuardian randomizes its package per build, so nothing may hardcode
+    one. AndroidManifest.xml is the source; apktool copies the same value into
+    its metadata (renameManifestPackage), which is read only when the manifest
+    is missing.
+    """
+    manifest = tree / "AndroidManifest.xml"
+    if manifest.is_file():
+        m = re.search(r'<manifest\b[^>]*\bpackage="([^"]+)"',
+                      manifest.read_text(encoding="utf-8"))
+        if m:
+            return m.group(1)
+    for rel, pattern in (
+            ("apktool.json", r'"renameManifestPackage":\s*"([^"]+)"'),
+            ("apktool.yml",
+             r"(?m)^\s*renameManifestPackage:\s*['\"]?([^\s'\"#]+)")):
+        path = tree / rel
+        if not path.is_file():
+            continue
+        m = re.search(pattern, path.read_text(encoding="utf-8"))
+        if m and m.group(1) not in ("null", "~"):
+            return m.group(1)
+    raise PatchError(
+        "tree declares no package (AndroidManifest.xml / apktool metadata)")
+
+
 def copy_resources(tree: Path) -> None:
     shutil.copytree(RES_DIR / "res", tree / "res", dirs_exist_ok=True)
 
@@ -120,9 +149,9 @@ def copy_smali(tree: Path) -> None:
 
     Must run AFTER rebrand(). These classes live in the rebranded namespace
     (org/vekendian/nexus/...), which is exactly the directory rebrand() creates
-    by moving com/scmq. Copying them first would make rebrand() refuse with
-    "already exists -- tree may be rebranded", because it cannot tell our
-    classes apart from GG's.
+    by moving the tree's declared package. Copying them first would make
+    rebrand() refuse with "already exists -- tree may be rebranded", because
+    it cannot tell our classes apart from GG's.
 
     Also copies the luajava/pivot port in resources/smali_luajava (see
     copy_luajava) into the same primary root.

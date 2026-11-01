@@ -281,18 +281,24 @@ def audit_id_drift(src: Path, out: Path) -> list:
     return errors
 
 
-def audit_rebrand_complete(tree: Path) -> list:
-    """No `com/scmq` token may survive the rebrand, in any form.
+def audit_rebrand_complete(tree: Path, old_pkg: str | None = None) -> list:
+    """No token of the pre-rebrand package may survive, in any form.
 
-    `replace_in_smali` only rewrites the slash form `Lcom/scmq/`. GG also carries
-    a descriptor literal `"Lcom/scmq;"` in android/ext/i.smali, whose length is
+    `replace_in_smali` only rewrites the slash form `L<old>/`. GG also carries
+    a descriptor literal `"L<old>;"` in android/ext/i.smali, whose length is
     then used to rebuild the package name at runtime. Leaving that behind is not
     cosmetic: the fallback computes `literal.length() - pkg.length()` and
-    substrings, which for a 20-character package name and an 11-character
-    literal yields an out-of-range substring.
+    substrings, which for the shorter old descriptor and the 20-character new
+    package yields an out-of-range substring.
+
+    The old package comes from the source tree. Without it this audit cannot
+    know what to look for, so it reports nothing rather than guessing.
     """
+    if old_pkg is None:
+        return []
     errors = []
-    needles = ("com/scmq", "com.scmq")
+    old_path = old_pkg.replace(".", "/")
+    needles = (old_path, old_pkg)
     for root_name in ("smali", "AndroidManifest.xml", "res", "apktool.yml", "apktool.json"):
         p = tree / root_name
         targets = []
