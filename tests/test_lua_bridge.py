@@ -812,6 +812,39 @@ def test_prompt_blocks_on_a_count_down_latch_with_a_timeout():
         "the dialog must be posted to the main thread"
 
 
+def test_ask_policy_raises_the_prompt_and_allow_policy_skips_it():
+    """ALLOW (1) skips the dialog; ASK (0) falls through to it.
+
+    The branch used to be `if-ne`, so ASK -- the one policy whose whole
+    purpose is to raise the prompt -- jumped straight to :granted. The dialog
+    never appeared and every capability was silently allowed. ALLOW then fell
+    through and prompted for something already granted.
+    """
+    code = _code_only(_lua("NexusLua$Perm.smali"))
+    i_policy = code.index("LuaBridge;->policy(")
+    i_prompt = code.index("Ljava/util/concurrent/CountDownLatch;-><init>")
+    between = code[i_policy:i_prompt]
+    assert "const/4 v1, 0x1" in between, "ALLOW is 1"
+    assert "if-eq v0, v1, :granted" in between, \
+        "policy == ALLOW must jump over the prompt; ASK must fall through"
+    assert "if-ne v0, v1" not in between, "ASK would skip its own prompt"
+
+
+def test_allowed_reports_the_allow_decision():
+    """Both allow buttons store decision 1; allowed() must return true for it.
+
+    The comparison was `if-ne`, so Allow returned false and Deny (2) or a
+    back-button dismissal (0) returned true: the gate denied exactly the calls
+    the user had just approved.
+    """
+    raw = _lua("NexusLua$Perm$Ask.smali")
+    start = raw.index(".method public allowed()Z")
+    body = raw[start:raw.index(".end method", start)]
+    assert "const/4 v1, 0x1" in body, "decision 1 is allow"
+    assert "if-eq v0, v1, :yes" in body
+    assert "if-ne v0, v1" not in body
+
+
 def test_prompt_uses_the_nexus_dialog_theme():
     code = _code_only(_lua("NexusLua$Perm$Ask.smali"))
     assert "NexusHost;->dialogBuilder()Landroid/app/AlertDialog$Builder;" in code

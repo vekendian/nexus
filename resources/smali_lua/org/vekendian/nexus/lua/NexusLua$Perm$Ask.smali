@@ -62,13 +62,13 @@
 
     const/4 v1, 0x1
 
-    if-ne v0, v1, :no
+    if-eq v0, v1, :yes
 
     const/4 v0, 0x0
 
     return v0
 
-    :no
+    :yes
     const/4 v0, 0x1
 
     return v0

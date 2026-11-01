@@ -32,7 +32,7 @@
 
     const/4 v1, 0x1
 
-    if-ne v0, v1, :granted
+    if-eq v0, v1, :granted
 
     new-instance v0, Ljava/util/concurrent/CountDownLatch;
 
