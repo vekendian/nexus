@@ -28,7 +28,8 @@ from .luapatch import (HELP_ANCHOR as LUA_HELP_ANCHOR,
                        SCRIPT_ANCHOR as LUA_SCRIPT_ANCHOR, SCRIPT_CALL_RE,
                        SCRIPT_HELPER_MARK, SCRIPT_REL as LUA_SCRIPT_REL,
                        template_tokens, templates as lua_templates,
-                       tree_files as lua_tree_files)
+                       tree_files as lua_tree_files,
+                       W3_ENTRY_ANCHOR, W3_GUARD_MARK)
 from .manifest import (APP_NAME_NEW, APP_NAME_OLD, NEW_VERSION_NAME, PKG_NEW,
                         SMALI_NEW)
 from .modules import ENGINE as ENGINE_HOST
@@ -179,6 +180,10 @@ def preflight(tree: Path, ids: Ids, profile=None) -> list:
         if _n != 1:
             errors.append(f"Script.smali: nexus registration anchor found "
                           f"{_n}x (expected 1x)")
+        _n = anchor_count(_script, W3_ENTRY_ANCHOR)
+        if _n != 1:
+            errors.append(f"Script.smali: W3 entry anchor found {_n}x "
+                          f"(expected 1x)")
 
     # Execute script dialog: the "?" action is replaced with the static help
     # dialog. The case block must still look the way luapatch expects, and the
@@ -898,6 +903,20 @@ def postflight(tree: Path, ids: Ids, src: Path | None = None, profile=None) -> l
         errors.append("Script.smali: nexusInstall call not exactly 1x")
     if _script.count(SCRIPT_HELPER_MARK) != 1:
         errors.append("Script.smali: nexusInstall helper missing")
+    # Script.W3() main-looper guard: landed once, and the off-main wait() plus
+    # InterruptedException handling preserved exactly.
+    if _script.count(W3_GUARD_MARK) != 1:
+        errors.append(f"Script.smali: W3 main-looper guard present "
+                      f"{_script.count(W3_GUARD_MARK)}x (expected 1x)")
+    if "invoke-virtual {p0}, Ljava/lang/Object;->wait()V" not in _script:
+        errors.append("Script.smali: W3 wait() not preserved")
+    if ".catch Ljava/lang/InterruptedException;" not in _script:
+        errors.append("Script.smali: W3 InterruptedException handling not preserved")
+    # W3 toast: deadlock-prevention notification via GG's own Tools.K1 path.
+    if "Landroid/ext/Tools;->K1(Ljava/lang/String;I)V" not in _script:
+        errors.append("Script.smali: W3 deadlock-prevention toast missing")
+    if '"Nexus: deadlock prevented"' not in _script:
+        errors.append("Script.smali: W3 toast message missing")
     _help_p = tree / LUA_HELP_REL
     if not _help_p.is_file():
         errors.append(f"o0$b.smali missing: {LUA_HELP_REL}")

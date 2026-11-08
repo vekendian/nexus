@@ -126,6 +126,71 @@ SCRIPT_HELPER = '''\
 .end method
 '''
 
+# --- Script.W3() main-looper guard -------------------------------------------
+# GameGuardian's decoded tree at smali/android/ext/Script.smali method
+# W3(Ljava/lang/Object;)V just does `Object.wait()`. n2.i() targets the main
+# looper (index 0) and, per n2.f with flag false, runs its Runnable *inline*
+# when already on the main thread — i.e. before W3() reaches wait(). A thread
+# that waits there loses that wakeup and deadlocks the main thread.
+# n2.e()Z (already present in this GG build) returns true iff myLooper() ==
+# getMainLooper(), so W3() returns immediately on the main thread and keeps the
+# original wait() + InterruptedException handling off-main.
+# Caveat: dialog-based APIs (alert/choice/prompt/multiChoice/makeRequest...)
+# display the dialog and return after showing it; they do not block until the
+# user interacts, so on the main thread these calls return once the dialog is
+# posted rather than waiting for user interaction.
+W3_REL = SCRIPT_REL
+W3_GUARD_MARK = "Landroid/ext/n2;->e()Z"
+W3_ENTRY_ANCHOR = '''.method static W3(Ljava/lang/Object;)V
+    .locals 1
+
+    .line 1
+    :try_start_0
+    invoke-virtual {p0}, Ljava/lang/Object;->wait()V'''
+
+W3_ENTRY_NEW = '''.method static W3(Ljava/lang/Object;)V
+    .locals 3
+
+    .line 1
+    # Main-looper guard: n2.i() targets the main looper (index 0) and runs its
+    # Runnable inline when already on the main thread (n2.f with flag false),
+    # i.e. before W3() reaches wait(). Waiting here would lose that wakeup and
+    # deadlock the main thread, so return immediately on the main thread.
+    # Off-main threads keep the original wait() + InterruptedException handling
+    # exactly as before.
+    # Caveat: dialog-based APIs (alert/choice/prompt/multiChoice/makeRequest...)
+    # display the dialog and return after showing it; they do not block until
+    # the user interacts, so on the main thread these calls return once the
+    # dialog is posted rather than waiting for user interaction.
+    invoke-static {}, Landroid/ext/n2;->e()Z
+    move-result v0
+
+    if-eqz v0, :cond_w3_main
+
+    # Main-thread deadlock prevented: notify the user via GG's own toast path.
+    const-string v1, "Nexus: deadlock prevented"
+    const/4 v2, 0x0
+    invoke-static {v1, v2}, Landroid/ext/Tools;->K1(Ljava/lang/String;I)V
+
+    return-void
+
+    :cond_w3_main
+    :try_start_0
+    invoke-virtual {p0}, Ljava/lang/Object;->wait()V'''
+
+
+def transform_w3_guard(smali: str) -> str:
+    """Insert the main-looper guard into Script.W3().
+
+    Idempotent: raises PatchError if the guard is already present, so re-applying
+    to an output tree fails loudly instead of duplicating the guard.
+    """
+    if W3_GUARD_MARK in smali:
+        raise PatchError("Script.smali: W3 main-looper guard already present "
+                         "(already patched?)")
+    return replace_once(smali, W3_ENTRY_ANCHOR, W3_ENTRY_NEW,
+                        "Script.W3 main-looper guard")
+
 HELP_REL = "smali/android/ext/o0$b.smali"
 
 # The Execute script dialog's "?" (examples) case. GG builds a one-line Script
@@ -476,6 +541,7 @@ def apply(tree: Path, ids) -> None:
         raise PatchError(f"{BASEIMPORT_CLASS_REL} missing: cannot wire import")
     write(tree, SCRIPT_REL, transform_luajava(read(tree, SCRIPT_REL)))
     write(tree, SCRIPT_REL, transform_script(read(tree, SCRIPT_REL)))
+    write(tree, W3_REL, transform_w3_guard(read(tree, W3_REL)))
     write(tree, BASELIB_REL, transform_baseimport(read(tree, BASELIB_REL)))
     write(tree, LUAVALUE_REL, transform_luavalue(read(tree, LUAVALUE_REL)))
     write(tree, HELP_REL, transform_help(read(tree, HELP_REL), ids))
