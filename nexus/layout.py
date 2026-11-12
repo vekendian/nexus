@@ -854,13 +854,15 @@ def _patch_element(xml: str, what: str, view_id: str | None = None,
 
 
 # The float icon is already Nexus artwork: an opaque near-black disc with an
-# orange outline N, so it reads over any game frame and needs no plate of its
-# own. What it lacks is a name -- and the name belongs on hot_frame, not on
-# the icon, because hot_frame is the view GameGuardian puts the click
-# listener on. The icon is then decorative as far as a screen reader is
-# concerned, and says so.
+# orange outline N, so it reads over any game frame. It still needs a plate
+# like the home screen's cards so the whole float reads as one flat surface
+# instead of a bare icon dropped on the game. The plate goes on hot_frame --
+# the view GameGuardian puts the click listener on -- and uses the home
+# screen's surface colour with a hairline edge so it stays visible over both
+# a dark game and a bright one.
 FLOAT_FRAME_ATTRS = [
     'android:contentDescription="@string/nexus_str_float_icon"',
+    'android:background="@drawable/nexus_bg_float_badge"',
 ]
 FLOAT_ICON_ATTRS = [
     'android:importantForAccessibility="no"',

@@ -238,6 +238,9 @@ def test_hot_point_nexus_chrome(sample):
     # the icon itself is decorative and says so
     assert 'android:contentDescription="@string/nexus_str_float_icon"' in out
     assert 'android:importantForAccessibility="no"' in out
+    # hot_frame is the icon's plate: a home-screen-style surface card so the
+    # float reads as one flat surface instead of a bare icon on the game
+    assert 'android:background="@drawable/nexus_bg_float_badge"' in out
     # the speed controls get names: they are the only interactive parts
     assert 'android:contentDescription="@string/nexus_str_float_speed_dec"' in out
     assert 'android:contentDescription="@string/nexus_str_float_speed_inc"' in out
