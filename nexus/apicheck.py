@@ -11,7 +11,8 @@ is visible to `apktool b` or to an arity check:
         -> the callee does not resolve
 
 So every `invoke` in the patched smali is resolved against
-framework/android-34.jar: the class must be in the archive, and the exact
+tools/android-34.jar (or framework/android-34.jar beside the checkout): the
+class must be in the archive, and the exact
 `name+descriptor` pair must be declared by it. Class-file constant pools are
 parsed directly, which yields the real dex descriptors without needing javap
 per class.
@@ -36,7 +37,12 @@ import zipfile
 from functools import lru_cache
 from pathlib import Path
 
-ANDROID_JAR = Path("/mnt/sdcard/#Vekendian/nexus/framework/android-34.jar")
+# The jar ships in tools/; a developer checkout that keeps it beside the repo
+# (framework/) still resolves through the fallback, so no absolute path is
+# baked in and a fresh clone works on any machine.
+_TOOLS = Path(__file__).resolve().parents[1] / "tools/android-34.jar"
+_SIBLING = Path(__file__).resolve().parents[2] / "framework/android-34.jar"
+ANDROID_JAR = _TOOLS if _TOOLS.is_file() else _SIBLING
 
 # The full descriptor must be rebuilt from all three parts; dropping the
 # return type silently turns every lookup into a miss.

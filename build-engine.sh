@@ -15,9 +15,10 @@
 #   resources/java/host     org.vekendian.nexus.modules.* -> host smali
 #   resources/java/dexexec  nexus.ExtensionRegistry + helpers -> res/raw/ydw_nexus_dexexec (dex)
 #
-# Tool paths come from the environment, defaulting to what this checkout has:
-#   NEXUS_ANDROID_JAR  android.jar for javac   (../framework/android-34.jar)
-#   NEXUS_APKTOOL      apktool jar, for baksmali
+# Tool paths come from the environment, defaulting to the jars this checkout
+# ships, then to the sibling directories a developer checkout may have:
+#   NEXUS_ANDROID_JAR  android.jar for javac   (tools/android-34.jar)
+#   NEXUS_APKTOOL      apktool jar, for baksmali (tools/apktool-2.8.1.jar)
 #   NEXUS_JAVAC        javac                  (javac 17 is fine; we target 8)
 #   NEXUS_D8           d8                      (any d8 >= 3.x)
 
@@ -26,8 +27,16 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-ANDROID_JAR="${NEXUS_ANDROID_JAR:-$ROOT/../framework/android-34.jar}"
-APKTOOL="${NEXUS_APKTOOL:-$ROOT/../tools/apktool-2.8.1.jar}"
+ANDROID_JAR="${NEXUS_ANDROID_JAR:-}"
+if [ -z "$ANDROID_JAR" ]; then
+    ANDROID_JAR="$ROOT/tools/android-34.jar"
+    [ -f "$ANDROID_JAR" ] || ANDROID_JAR="$ROOT/../framework/android-34.jar"
+fi
+APKTOOL="${NEXUS_APKTOOL:-}"
+if [ -z "$APKTOOL" ]; then
+    APKTOOL="$ROOT/tools/apktool-2.8.1.jar"
+    [ -f "$APKTOOL" ] || APKTOOL="$ROOT/../tools/apktool-2.8.1.jar"
+fi
 JAVAC="${NEXUS_JAVAC:-javac}"
 JAR="${NEXUS_JAR:-jar}"
 D8="${NEXUS_D8:-d8}"

@@ -6,7 +6,8 @@
 # (Invoke with `bash`: Android shared storage cannot set the exec bit.)
 #
 # Tool paths come from the environment so this works off-device:
-#   NEXUS_APKTOOL  apktool jar, or a full path   (default: apktool on PATH)
+#   NEXUS_APKTOOL  apktool jar, or a full path   (default: tools/apktool-2.8.1.jar,
+#                                                 then apktool on PATH)
 #   NEXUS_AAPT     aapt2 binary                  (default: aapt2 on PATH)
 #   NEXUS_KEYSTORE signing keystore        (default: ~/.android/debug.keystore)
 #   NEXUS_KEYALIAS keystore alias          (default: androiddebugkey)
@@ -14,13 +15,14 @@
 
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "$0")" && pwd)"
 SRC=""
 OUT="nexus-1.0.0.apk"
 INTERMEDIATE="$(dirname "$OUT")/nexus_patched.apk"
 ALIGNED="$(dirname "$OUT")/nexus_aligned.apk"
 
 usage() {
-    sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
     exit "${1:-0}"
 }
 
@@ -38,7 +40,11 @@ done
 [ -f "$SRC/apktool.yml" ] || {
     echo "error: $SRC is not an apktool decode (no apktool.yml)" >&2; exit 2; }
 
-APKTOOL="${NEXUS_APKTOOL:-apktool}"
+APKTOOL="${NEXUS_APKTOOL:-}"
+if [ -z "$APKTOOL" ]; then
+    APKTOOL="$ROOT/tools/apktool-2.8.1.jar"
+    [ -f "$APKTOOL" ] || APKTOOL=apktool
+fi
 AAPT="${NEXUS_AAPT:-aapt2}"
 KEYSTORE="${NEXUS_KEYSTORE:-$HOME/.android/debug.keystore}"
 KEYALIAS="${NEXUS_KEYALIAS:-androiddebugkey}"

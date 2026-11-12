@@ -39,8 +39,8 @@ patcher makes no network calls and never modifies the tree you point it at.
 ## Quick start
 
 ```bash
-# 1. decode. apktool 2.8.1 is the pinned decoder; pass the aapt2 you want
-#    used, because `aapt2` on PATH is not always runnable.
+# 1. decode. apktool 2.8.1 is pinned and ships in tools/; pass the aapt2 you
+#    want used, because `aapt2` on PATH is not always runnable.
 java -jar tools/apktool-2.8.1.jar d -f -s gg-101.4.apk -o gg_src
 
 # 2. sanity-check the tree without modifying anything
@@ -170,9 +170,16 @@ interpreter separate from `/usr/bin/python3`:
 
 ## Environment
 
+Two jars ship in `tools/`, so decoding, patching and the engine build need no
+downloads: `apktool-2.8.1.jar` (the pinned decoder/builder) and
+`android-34.jar` (the API 34 framework used by `build-engine.sh` and the API
+resolution tests). `aapt2` is a platform binary and is not bundled -- point
+`NEXUS_AAPT` at one, or have it on `PATH`.
+
 | Variable | Default | Purpose |
 |---|---|---|
-| `NEXUS_APKTOOL` | `apktool` on `PATH` | apktool jar, or a full path to one |
+| `NEXUS_APKTOOL` | `tools/apktool-2.8.1.jar` | apktool jar, or a full path to one |
+| `NEXUS_ANDROID_JAR` | `tools/android-34.jar` | android.jar for javac and API resolution |
 | `NEXUS_AAPT` | `aapt2` on `PATH` | aapt2 binary |
 | `NEXUS_KEYSTORE` | `~/.android/debug.keystore` | signing key |
 | `NEXUS_KEYALIAS` | `androiddebugkey` | signing alias |
