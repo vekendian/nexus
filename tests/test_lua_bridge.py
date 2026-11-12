@@ -263,6 +263,50 @@ def test_no_template_calls_a_private_method_virtually():
     assert not bad, "ART would reject these classes:\n  " + "\n  ".join(bad)
 
 
+def test_table_keys_are_built_with_valueOf_not_error():
+    """A string table key must be a LuaString, and in this build the two
+    one-argument String factories are easy to confuse:
+
+        LuaValue.R0(String) -> LuaValue   new LuaError(String); throw
+        LuaValue.K2(String) -> LuaString  valueOf
+
+    R0 exists in the stock tree and the shape check above accepts it, so it
+    assembled and built cleanly -- but every call threw. contentBytes ran
+    first on every install(path, table), so install() always died with
+    `content (field 'install')` on the device, the message LuaJ annotates with
+    the field name of the failing call site. Table keys go through K2; R0 is
+    only ever the `error()` helper and must not appear in our templates."""
+    bad = []
+    for tpl in TEMPLATES:
+        for line_no, line in enumerate((LUA / tpl).read_text(encoding="utf-8")
+                                       .splitlines(), 1):
+            if "Lluaj/LuaValue;->R0(" in line:
+                bad.append(f"{tpl}:{line_no}: {line.strip()}")
+    assert not bad, ("table keys built with LuaValue.R0 (error), "
+                     "use K2 (valueOf):\n  " + "\n  ".join(bad))
+
+    fn = (LUA / "NexusLua$Modules$Fn.smali").read_text(encoding="utf-8")
+    for helper in ("stringField", "contentBytes"):
+        header = next(line for line in fn.splitlines()
+                      if line.startswith(".method ") and f" {helper}(" in line)
+        body = _method_body(fn, header)
+        assert "Lluaj/LuaValue;->K2(Ljava/lang/String;)Lluaj/LuaString;" in body, (
+            f"{helper} must build its key with LuaValue.K2 (valueOf)")
+
+    stock = GG_TREE / "smali/luaj/LuaValue.smali"
+    if stock.is_file():
+        # Pin the premise, so a future GG build that swaps the obfuscated names
+        # fails here instead of silently turning this guard into a no-op.
+        text = stock.read_text(encoding="utf-8")
+        r0 = _method_body(text, ".method public static R0(Ljava/lang/String;)"
+                                "Lluaj/LuaValue;")
+        assert "throw" in r0, "LuaValue.R0 is no longer the throwing error() helper"
+        k2 = _method_body(text, ".method public static K2(Ljava/lang/String;)"
+                                "Lluaj/LuaString;")
+        assert "Lluaj/LuaString;->K2(Ljava/lang/String;)Lluaj/LuaString;" in k2, (
+            "LuaValue.K2 is no longer the valueOf helper")
+
+
 # Visibility is checked when the instruction resolves, not when the class is
 # verified: a package-private member named from another package throws
 # IllegalAccessError on the first execution, after the APK builds cleanly and

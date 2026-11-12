@@ -242,7 +242,7 @@
 
     const/4 v0, 0x0
 
-    invoke-static {p1}, Lluaj/LuaValue;->R0(Ljava/lang/String;)Lluaj/LuaValue;
+    invoke-static {p1}, Lluaj/LuaValue;->K2(Ljava/lang/String;)Lluaj/LuaString;
 
     move-result-object v1
 
@@ -277,7 +277,7 @@
 
     const-string v0, "content"
 
-    invoke-static {v0}, Lluaj/LuaValue;->R0(Ljava/lang/String;)Lluaj/LuaValue;
+    invoke-static {v0}, Lluaj/LuaValue;->K2(Ljava/lang/String;)Lluaj/LuaString;
 
     move-result-object v0
 
