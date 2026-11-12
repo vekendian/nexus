@@ -27,7 +27,7 @@
 
     const/16 v1, 0x20
 
-    .line 204
+    .line 268
     invoke-virtual {p0, v0, v1}, Ljava/lang/String;->replace(CC)Ljava/lang/String;
 
     move-result-object p0
@@ -44,7 +44,7 @@
 .method static find(Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;)Lorg/vekendian/nexus/api/ModuleInfo;
     .registers 4
 
-    .line 171
+    .line 217
     invoke-interface {p0}, Lorg/vekendian/nexus/api/NexusExecutor;->modules()Ljava/util/List;
 
     move-result-object p0
@@ -66,7 +66,7 @@
 
     check-cast v0, Lorg/vekendian/nexus/api/ModuleInfo;
 
-    .line 172
+    .line 218
     invoke-virtual {v0}, Lorg/vekendian/nexus/api/ModuleInfo;->path()Ljava/lang/String;
 
     move-result-object v1
@@ -85,20 +85,121 @@
     return-object p0
 .end method
 
-.method static install(Landroid/content/Context;Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;)Ljava/lang/Object;
-    .registers 5
+.method private static idOf(Ljava/lang/String;)Ljava/lang/String;
+    .registers 3
 
-    .line 43
+    if-nez p0, :cond_5
+
+    const-string p0, ""
+
+    return-object p0
+
+    :cond_5
+    const/16 v0, 0x2f
+
+    .line 250
+    invoke-virtual {p0, v0}, Ljava/lang/String;->lastIndexOf(I)I
+
+    move-result v0
+
+    if-ltz v0, :cond_13
+
+    add-int/lit8 v0, v0, 0x1
+
+    .line 251
+    invoke-virtual {p0, v0}, Ljava/lang/String;->substring(I)Ljava/lang/String;
+
+    move-result-object p0
+
+    :cond_13
+    const-string v0, ".lua"
+
+    .line 252
+    invoke-virtual {p0, v0}, Ljava/lang/String;->endsWith(Ljava/lang/String;)Z
+
+    move-result v0
+
+    if-nez v0, :cond_2d
+
+    const-string v0, ".jar"
+
+    invoke-virtual {p0, v0}, Ljava/lang/String;->endsWith(Ljava/lang/String;)Z
+
+    move-result v0
+
+    if-nez v0, :cond_2d
+
+    const-string v0, ".dex"
+
+    .line 253
+    invoke-virtual {p0, v0}, Ljava/lang/String;->endsWith(Ljava/lang/String;)Z
+
+    move-result v0
+
+    if-eqz v0, :cond_2c
+
+    goto :goto_2d
+
+    :cond_2c
+    return-object p0
+
+    :cond_2d
+    :goto_2d
+    const/4 v0, 0x0
+
+    .line 254
+    invoke-virtual {p0}, Ljava/lang/String;->length()I
+
+    move-result v1
+
+    add-int/lit8 v1, v1, -0x4
+
+    invoke-virtual {p0, v0, v1}, Ljava/lang/String;->substring(II)Ljava/lang/String;
+
+    move-result-object p0
+
+    return-object p0
+.end method
+
+.method static install(Landroid/content/Context;Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;)Ljava/lang/Object;
+    .registers 10
+
+    const/4 v3, 0x0
+
+    const/4 v4, 0x0
+
+    const/4 v5, 0x0
+
+    const/4 v6, 0x0
+
+    move-object v0, p0
+
+    move-object v1, p1
+
+    move-object v2, p2
+
+    .line 45
+    invoke-static/range {v0 .. v6}, Lorg/vekendian/nexus/modules/LuaModules;->install(Landroid/content/Context;Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+
+    move-result-object p0
+
+    return-object p0
+.end method
+
+.method static install(Landroid/content/Context;Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+    .registers 16
+
+    .line 52
     new-instance v0, Ljava/io/File;
 
     invoke-direct {v0, p2}, Ljava/io/File;-><init>(Ljava/lang/String;)V
 
-    .line 44
+    .line 53
     invoke-virtual {v0}, Ljava/io/File;->isFile()Z
 
     move-result v1
 
-    if-eqz v1, :cond_27
+    if-eqz v1, :cond_33
 
     invoke-virtual {v0}, Ljava/io/File;->canRead()Z
 
@@ -106,46 +207,69 @@
 
     if-nez v1, :cond_12
 
-    goto :goto_27
+    goto :goto_33
 
-    .line 48
+    .line 58
     :cond_12
     :try_start_12
+    invoke-static {p5}, Lorg/vekendian/nexus/modules/LuaModules;->parseVersion(Ljava/lang/String;)I
+
+    move-result v7
+    :try_end_16
+    .catch Ljava/lang/NumberFormatException; {:try_start_12 .. :try_end_16} :catch_30
+
+    .line 63
+    :try_start_16
     invoke-static {v0}, Landroid/net/Uri;->fromFile(Ljava/io/File;)Landroid/net/Uri;
 
-    move-result-object p2
+    move-result-object v4
 
-    invoke-interface {p1, p0, p2}, Lorg/vekendian/nexus/api/NexusExecutor;->add(Landroid/content/Context;Landroid/net/Uri;)Ljava/lang/String;
+    move-object v2, p1
+
+    move-object v3, p0
+
+    move-object v5, p3
+
+    move-object v6, p4
+
+    move-object v8, p6
+
+    invoke-interface/range {v2 .. v8}, Lorg/vekendian/nexus/api/NexusExecutor;->add(Landroid/content/Context;Landroid/net/Uri;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String;
 
     move-result-object p0
 
-    if-nez p0, :cond_1f
+    if-nez p0, :cond_28
 
     const-string p0, "module could not be imported (expected .lua, .jar or .dex)"
-    :try_end_1e
-    .catchall {:try_start_12 .. :try_end_1e} :catchall_21
+    :try_end_27
+    .catchall {:try_start_16 .. :try_end_27} :catchall_2a
 
-    goto :goto_20
+    goto :goto_29
 
-    :cond_1f
+    :cond_28
     const/4 p0, 0x0
 
-    :goto_20
+    :goto_29
     return-object p0
 
-    :catchall_21
+    :catchall_2a
     move-exception p0
 
-    .line 53
+    .line 69
     invoke-static {p0}, Lorg/vekendian/nexus/modules/ModuleLoader;->describe(Ljava/lang/Throwable;)Ljava/lang/String;
 
     move-result-object p0
 
     return-object p0
 
-    .line 45
-    :cond_27
-    :goto_27
+    :catch_30
+    const-string p0, "version must be an integer"
+
+    return-object p0
+
+    .line 54
+    :cond_33
+    :goto_33
     new-instance p0, Ljava/lang/StringBuilder;
 
     invoke-direct {p0}, Ljava/lang/StringBuilder;-><init>()V
@@ -163,12 +287,87 @@
     return-object p0
 .end method
 
+.method static installBytes(Landroid/content/Context;Lorg/vekendian/nexus/api/NexusExecutor;[BLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+    .registers 15
+
+    if-eqz p2, :cond_24
+
+    .line 77
+    array-length v0, p2
+
+    if-nez v0, :cond_6
+
+    goto :goto_24
+
+    .line 82
+    :cond_6
+    :try_start_6
+    invoke-static {p5}, Lorg/vekendian/nexus/modules/LuaModules;->parseVersion(Ljava/lang/String;)I
+
+    move-result v6
+    :try_end_a
+    .catch Ljava/lang/NumberFormatException; {:try_start_6 .. :try_end_a} :catch_21
+
+    move-object v1, p1
+
+    move-object v2, p0
+
+    move-object v3, p2
+
+    move-object v4, p3
+
+    move-object v5, p4
+
+    move-object v7, p6
+
+    .line 87
+    :try_start_10
+    invoke-interface/range {v1 .. v7}, Lorg/vekendian/nexus/api/NexusExecutor;->addBytes(Landroid/content/Context;[BLjava/lang/String;Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String;
+
+    move-result-object p0
+
+    if-nez p0, :cond_19
+
+    const-string p0, "module could not be imported"
+    :try_end_18
+    .catchall {:try_start_10 .. :try_end_18} :catchall_1b
+
+    goto :goto_1a
+
+    :cond_19
+    const/4 p0, 0x0
+
+    :goto_1a
+    return-object p0
+
+    :catchall_1b
+    move-exception p0
+
+    .line 91
+    invoke-static {p0}, Lorg/vekendian/nexus/modules/ModuleLoader;->describe(Ljava/lang/Throwable;)Ljava/lang/String;
+
+    move-result-object p0
+
+    return-object p0
+
+    :catch_21
+    const-string p0, "version must be an integer"
+
+    return-object p0
+
+    :cond_24
+    :goto_24
+    const-string p0, "empty module content"
+
+    return-object p0
+.end method
+
 .method static invoke(Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;)Ljava/lang/Object;
     .registers 6
 
     const/16 v0, 0x9
 
-    .line 108
+    .line 154
     invoke-virtual {p1, v0}, Ljava/lang/String;->indexOf(I)I
 
     move-result v1
@@ -184,7 +383,7 @@
     :cond_b
     add-int/lit8 v3, v1, 0x1
 
-    .line 109
+    .line 155
     invoke-virtual {p1, v0, v3}, Ljava/lang/String;->indexOf(II)I
 
     move-result v3
@@ -197,7 +396,7 @@
     :cond_14
     add-int/lit8 v2, v3, 0x1
 
-    .line 110
+    .line 156
     invoke-virtual {p1, v0, v2}, Ljava/lang/String;->indexOf(II)I
 
     move-result v2
@@ -214,21 +413,21 @@
     :cond_21
     const/4 v0, 0x0
 
-    .line 114
+    .line 160
     invoke-virtual {p1, v0, v1}, Ljava/lang/String;->substring(II)Ljava/lang/String;
 
     move-result-object v0
 
     add-int/lit8 v1, v1, 0x1
 
-    .line 115
+    .line 161
     invoke-virtual {p1, v1, v3}, Ljava/lang/String;->substring(II)Ljava/lang/String;
 
     move-result-object v1
 
     add-int/lit8 v2, v2, 0x1
 
-    .line 116
+    .line 162
     invoke-virtual {p1}, Ljava/lang/String;->length()I
 
     move-result v3
@@ -237,14 +436,14 @@
 
     move-result-object p1
 
-    .line 117
+    .line 163
     invoke-static {p0, v0}, Lorg/vekendian/nexus/modules/LuaModules;->known(Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;)Z
 
     move-result v2
 
     if-nez v2, :cond_4e
 
-    .line 118
+    .line 164
     new-instance p0, Ljava/lang/StringBuilder;
 
     invoke-direct {p0}, Ljava/lang/StringBuilder;-><init>()V
@@ -261,7 +460,7 @@
 
     return-object p0
 
-    .line 121
+    .line 167
     :cond_4e
     :try_start_4e
     invoke-interface {p0, v0, v1, p1}, Lorg/vekendian/nexus/api/NexusExecutor;->jarInvoke(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;
@@ -275,7 +474,7 @@
     :catchall_53
     move-exception p0
 
-    .line 123
+    .line 169
     invoke-static {p0}, Lorg/vekendian/nexus/modules/ModuleLoader;->describe(Ljava/lang/Throwable;)Ljava/lang/String;
 
     move-result-object p0
@@ -296,7 +495,7 @@
 
     if-eqz p1, :cond_4f
 
-    .line 146
+    .line 192
     invoke-virtual {p1}, Ljava/lang/String;->length()I
 
     move-result v1
@@ -305,7 +504,7 @@
 
     goto :goto_4f
 
-    .line 149
+    .line 195
     :cond_a
     invoke-interface {p0}, Lorg/vekendian/nexus/api/NexusExecutor;->modules()Ljava/util/List;
 
@@ -328,7 +527,7 @@
 
     check-cast v1, Lorg/vekendian/nexus/api/ModuleInfo;
 
-    .line 150
+    .line 196
     invoke-virtual {v1}, Lorg/vekendian/nexus/api/ModuleInfo;->path()Ljava/lang/String;
 
     move-result-object v2
@@ -343,7 +542,7 @@
 
     return v3
 
-    .line 153
+    .line 199
     :cond_2a
     invoke-virtual {v1}, Lorg/vekendian/nexus/api/ModuleInfo;->path()Ljava/lang/String;
 
@@ -351,7 +550,7 @@
 
     const/16 v2, 0x2f
 
-    .line 154
+    .line 200
     invoke-virtual {v1, v2}, Ljava/lang/String;->lastIndexOf(I)I
 
     move-result v2
@@ -360,7 +559,7 @@
 
     add-int/lit8 v2, v2, 0x1
 
-    .line 156
+    .line 202
     invoke-virtual {v1, v2}, Ljava/lang/String;->substring(I)Ljava/lang/String;
 
     move-result-object v1
@@ -368,19 +567,19 @@
     :cond_3c
     const/16 v2, 0x2e
 
-    .line 158
+    .line 204
     invoke-virtual {v1, v2}, Ljava/lang/String;->lastIndexOf(I)I
 
     move-result v2
 
     if-lez v2, :cond_48
 
-    .line 160
+    .line 206
     invoke-virtual {v1, v0, v2}, Ljava/lang/String;->substring(II)Ljava/lang/String;
 
     move-result-object v1
 
-    .line 162
+    .line 208
     :cond_48
     invoke-virtual {p1, v1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
 
@@ -413,7 +612,7 @@
     const/4 v2, 0x0
 
     :goto_b
-    if-ge v2, v0, :cond_65
+    if-ge v2, v0, :cond_a2
 
     .line 33
     invoke-interface {p0, v2}, Ljava/util/List;->get(I)Ljava/lang/Object;
@@ -454,6 +653,22 @@
     invoke-virtual {v4, v5}, Ljava/lang/StringBuilder;->append(C)Ljava/lang/StringBuilder;
 
     .line 35
+    invoke-virtual {v3}, Lorg/vekendian/nexus/api/ModuleInfo;->path()Ljava/lang/String;
+
+    move-result-object v6
+
+    invoke-static {v6}, Lorg/vekendian/nexus/modules/LuaModules;->idOf(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v6
+
+    invoke-static {v6}, Lorg/vekendian/nexus/modules/LuaModules;->field(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v6
+
+    invoke-virtual {v4, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    invoke-virtual {v4, v5}, Ljava/lang/StringBuilder;->append(C)Ljava/lang/StringBuilder;
+
     invoke-virtual {v3}, Lorg/vekendian/nexus/api/ModuleInfo;->state()I
 
     move-result v6
@@ -466,6 +681,7 @@
 
     invoke-virtual {v4, v5}, Ljava/lang/StringBuilder;->append(C)Ljava/lang/StringBuilder;
 
+    .line 36
     invoke-virtual {v3}, Lorg/vekendian/nexus/api/ModuleInfo;->version()I
 
     move-result v6
@@ -474,21 +690,58 @@
 
     invoke-virtual {v4, v5}, Ljava/lang/StringBuilder;->append(C)Ljava/lang/StringBuilder;
 
-    .line 36
     invoke-virtual {v3}, Lorg/vekendian/nexus/api/ModuleInfo;->autostart()Z
 
-    move-result v3
+    move-result v6
 
-    if-eqz v3, :cond_57
+    if-eqz v6, :cond_69
 
-    const-string v3, "true"
+    const-string v6, "true"
 
-    goto :goto_59
+    goto :goto_6b
 
-    :cond_57
-    const-string v3, "false"
+    :cond_69
+    const-string v6, "false"
 
-    :goto_59
+    :goto_6b
+    invoke-virtual {v4, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    invoke-virtual {v4, v5}, Ljava/lang/StringBuilder;->append(C)Ljava/lang/StringBuilder;
+
+    .line 37
+    invoke-virtual {v3}, Lorg/vekendian/nexus/api/ModuleInfo;->type()Lorg/vekendian/nexus/api/ModuleInfo$Type;
+
+    move-result-object v6
+
+    invoke-static {v6}, Lorg/vekendian/nexus/modules/LuaModules;->type(Lorg/vekendian/nexus/api/ModuleInfo$Type;)Ljava/lang/String;
+
+    move-result-object v6
+
+    invoke-virtual {v4, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    invoke-virtual {v4, v5}, Ljava/lang/StringBuilder;->append(C)Ljava/lang/StringBuilder;
+
+    invoke-virtual {v3}, Lorg/vekendian/nexus/api/ModuleInfo;->description()Ljava/lang/String;
+
+    move-result-object v6
+
+    invoke-static {v6}, Lorg/vekendian/nexus/modules/LuaModules;->field(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v6
+
+    invoke-virtual {v4, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    invoke-virtual {v4, v5}, Ljava/lang/StringBuilder;->append(C)Ljava/lang/StringBuilder;
+
+    .line 38
+    invoke-virtual {v3}, Lorg/vekendian/nexus/api/ModuleInfo;->message()Ljava/lang/String;
+
+    move-result-object v3
+
+    invoke-static {v3}, Lorg/vekendian/nexus/modules/LuaModules;->field(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v3
+
     invoke-virtual {v4, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 
     invoke-virtual {v4}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
@@ -499,16 +752,16 @@
 
     add-int/lit8 v2, v2, 0x1
 
-    goto :goto_b
+    goto/16 :goto_b
 
-    :cond_65
+    :cond_a2
     return-object v1
 .end method
 
 .method static loader(Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;)Ljava/lang/Object;
     .registers 3
 
-    .line 90
+    .line 136
     invoke-static {p0, p1}, Lorg/vekendian/nexus/modules/LuaModules;->known(Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;)Z
 
     move-result v0
@@ -519,7 +772,7 @@
 
     return-object p0
 
-    .line 94
+    .line 140
     :cond_8
     :try_start_8
     invoke-interface {p0, p1}, Lorg/vekendian/nexus/api/NexusExecutor;->loadLibrary(Ljava/lang/String;)Ljava/lang/ClassLoader;
@@ -533,7 +786,7 @@
     :catchall_d
     move-exception p0
 
-    .line 96
+    .line 142
     invoke-static {p0}, Lorg/vekendian/nexus/modules/ModuleLoader;->describe(Ljava/lang/Throwable;)Ljava/lang/String;
 
     move-result-object p0
@@ -541,17 +794,54 @@
     return-object p0
 .end method
 
+.method private static parseVersion(Ljava/lang/String;)I
+    .registers 2
+
+    if-eqz p0, :cond_16
+
+    .line 97
+    invoke-virtual {p0}, Ljava/lang/String;->trim()Ljava/lang/String;
+
+    move-result-object v0
+
+    invoke-virtual {v0}, Ljava/lang/String;->length()I
+
+    move-result v0
+
+    if-nez v0, :cond_d
+
+    goto :goto_16
+
+    .line 100
+    :cond_d
+    invoke-virtual {p0}, Ljava/lang/String;->trim()Ljava/lang/String;
+
+    move-result-object p0
+
+    invoke-static {p0}, Ljava/lang/Integer;->parseInt(Ljava/lang/String;)I
+
+    move-result p0
+
+    return p0
+
+    :cond_16
+    :goto_16
+    const/4 p0, 0x0
+
+    return p0
+.end method
+
 .method static source(Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;)Ljava/lang/Object;
     .registers 3
 
-    .line 134
+    .line 180
     invoke-static {p0, p1}, Lorg/vekendian/nexus/modules/LuaModules;->known(Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;)Z
 
     move-result v0
 
     if-nez v0, :cond_18
 
-    .line 135
+    .line 181
     new-instance p0, Ljava/lang/StringBuilder;
 
     invoke-direct {p0}, Ljava/lang/StringBuilder;-><init>()V
@@ -568,7 +858,7 @@
 
     return-object p0
 
-    .line 138
+    .line 184
     :cond_18
     :try_start_18
     invoke-interface {p0, p1}, Lorg/vekendian/nexus/api/NexusExecutor;->luaSource(Ljava/lang/String;)[Ljava/lang/String;
@@ -582,7 +872,7 @@
     :catchall_1d
     move-exception p0
 
-    .line 140
+    .line 186
     invoke-static {p0}, Lorg/vekendian/nexus/modules/ModuleLoader;->describe(Ljava/lang/Throwable;)Ljava/lang/String;
 
     move-result-object p0
@@ -593,14 +883,14 @@
 .method static spec(Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;)Ljava/lang/Object;
     .registers 3
 
-    .line 68
+    .line 114
     invoke-static {p0, p1}, Lorg/vekendian/nexus/modules/LuaModules;->known(Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;)Z
 
     move-result v0
 
     if-nez v0, :cond_18
 
-    .line 69
+    .line 115
     new-instance p0, Ljava/lang/StringBuilder;
 
     invoke-direct {p0}, Ljava/lang/StringBuilder;-><init>()V
@@ -617,7 +907,7 @@
 
     return-object p0
 
-    .line 72
+    .line 118
     :cond_18
     :try_start_18
     invoke-interface {p0, p1}, Lorg/vekendian/nexus/api/NexusExecutor;->jarSpec(Ljava/lang/String;)[Ljava/lang/String;
@@ -631,7 +921,7 @@
     :catchall_1d
     move-exception p0
 
-    .line 74
+    .line 120
     invoke-static {p0}, Lorg/vekendian/nexus/modules/ModuleLoader;->describe(Ljava/lang/Throwable;)Ljava/lang/String;
 
     move-result-object p0
@@ -683,10 +973,33 @@
     return-object p0
 .end method
 
+.method private static type(Lorg/vekendian/nexus/api/ModuleInfo$Type;)Ljava/lang/String;
+    .registers 1
+
+    if-nez p0, :cond_5
+
+    const-string p0, "lua"
+
+    goto :goto_d
+
+    .line 260
+    :cond_5
+    invoke-virtual {p0}, Lorg/vekendian/nexus/api/ModuleInfo$Type;->name()Ljava/lang/String;
+
+    move-result-object p0
+
+    invoke-virtual {p0}, Ljava/lang/String;->toLowerCase()Ljava/lang/String;
+
+    move-result-object p0
+
+    :goto_d
+    return-object p0
+.end method
+
 .method static uninstall(Lorg/vekendian/nexus/api/NexusExecutor;Lorg/vekendian/nexus/api/ModuleInfo;)Z
     .registers 2
 
-    .line 180
+    .line 226
     invoke-virtual {p1}, Lorg/vekendian/nexus/api/ModuleInfo;->path()Ljava/lang/String;
 
     move-result-object p1

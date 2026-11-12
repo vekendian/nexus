@@ -122,12 +122,6 @@ PANEL_HOME_HEAD = '''\
                         android:layout_height="160.0dip"
                         android:layout_marginTop="16.0dip"
                         android:background="@drawable/nexus_bg_ring_off">
-                        <View
-                            android:id="@id/nexus_power_glow"
-                            android:layout_width="fill_parent"
-                            android:layout_height="fill_parent"
-                            android:alpha="0.0"
-                            android:background="@drawable/nexus_bg_glow" />
                         <android.fix.ImageView
                             android:id="@id/nexus_power_icon"
                             android:layout_width="96.0dip"
@@ -953,7 +947,7 @@ def transform_hot_point(xml: str) -> str:
 # both buttons to the float icon's size at runtime, so anything set here is
 # overwritten the moment the panel appears.
 FLOAT_BUTTON_ATTRS = [
-    'android:background="@drawable/nexus_bg_button"',
+    'android:background="@drawable/nexus_bg_float_button"',
     'android:textColor="@color/nexus_text"',
 ]
 

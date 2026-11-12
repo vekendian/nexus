@@ -529,6 +529,51 @@ def test_the_loader_op_is_dispatched_and_silent_for_a_lua_module():
     assert "executor.loadLibrary(id)" in host
 
 
+def test_install_accepts_a_table_with_content():
+    """install{content=...} copies the Lua string's bytes; the host Java side
+    cannot reference luaj, so the slicing happens in the smali caller."""
+    fn = _code_only(_lua("NexusLua$Modules$Fn.smali"))
+    assert "Lluaj/LuaString;->P:[B" in fn
+    assert "Lluaj/LuaString;->Q:I" in fn
+    assert "Lluaj/LuaString;->R:I" in fn
+    assert "Ljava/util/Arrays;->copyOfRange([BII)[B" in fn
+    assert "LuaBridge;->installBytes(" in fn
+    assert "LuaBridge;->installPath(" in fn
+
+
+def test_install_table_metadata_fields():
+    fn = _code_only(_lua("NexusLua$Modules$Fn.smali"))
+    for key in ('"content"', '"path"', '"name"', '"description"',
+                '"version"', '"type"'):
+        assert key in fn, key
+
+
+def test_list_split_keeps_trailing_empty_fields():
+    """Java's String.split drops trailing empties. A module with an empty
+    description and message would then split to 7 fields while table() reads
+    nine, and list() would throw ArrayIndexOutOfBoundsException."""
+    body = _method_body(_lua("NexusLua$Modules$Fn.smali"),
+                        ".method private static table(")
+    assert "split(Ljava/lang/String;I)[Ljava/lang/String;" in body
+    assert "const/4 v6, -0x1" in body
+    assert "split(Ljava/lang/String;)[Ljava/lang/String;" not in body
+
+
+def test_list_records_carry_the_hash_fields():
+    """list() returns a table per module with named fields, not a flat record
+    a script has to index positionally."""
+    host = (RES_DIR / "java/host/org/vekendian/nexus/modules/LuaModules.java"
+            ).read_text(encoding="utf-8")
+    for field in ("s.path()", "s.name()", "idOf(s.path())", "state(s.state())",
+                  "s.version()", "s.autostart()", "type(s.type())",
+                  "s.description()", "s.message()"):
+        assert field in host, field
+    fn = _lua("NexusLua$Modules$Fn.smali")
+    for key in ("path", "name", "id", "state", "version", "autostart",
+                "type", "description", "message"):
+        assert f'const-string v5, "{key}"' in fn, key
+
+
 def test_the_gate_order_is_ready_then_permission_then_call():
     code = _code_only(_lua("NexusLua$Modules$Fn.smali"))
     i_ready = code.index("LuaBridge;->ready()Z")
@@ -772,6 +817,24 @@ def test_help_text_matches_every_gg_signature():
         assert _gg_usage(name) in text, name
 
 
+def _gg_variables() -> list:
+    """The uppercase constants Script.B3 registers on the gg table."""
+    text = (GG_TREE / "smali/android/ext/Script.smali").read_text(encoding="utf-8")
+    start = text.index(".method static B3(Lluaj/LuaTable;Ljava/util/ArrayList;)V")
+    body = text[start:text.index(".end method", start)]
+    names = re.findall(r'const-string v\d+, "([A-Z][A-Z0-9_]*)"', body)
+    return sorted(set(names))
+
+
+def test_help_text_documents_every_gg_constant():
+    text = _help_text()
+    names = _gg_variables()
+    assert len(names) == 56, "gg's constant count changed; regenerate the help"
+    assert "gg constants" in text
+    for name in names:
+        assert name in text, name
+
+
 def test_help_text_covers_the_nexus_surface():
     text = _help_text()
     assert "nexus.version = 1.0" in text
@@ -783,7 +846,7 @@ def test_help_text_covers_the_nexus_surface():
     assert "import(name)  name is the file name without .jar/.dex/.lua" in text
     assert "local zip = nexus.modules.import('zip')" in text
     assert "zip.compress('/sdcard/Download/folder', 5)" in text
-    assert "path, name, state, version, autostart" in text
+    assert "path, name, id, state, version, autostart, type, description, message" in text
     assert "idle, running, finished, stopped, error" in text
     assert "install(path)" in text
     assert "uninstall  takes a path returned by install or list" in text
@@ -853,15 +916,35 @@ def test_prompt_uses_the_nexus_dialog_theme():
 
 
 def test_prompt_buttons_map_to_once_always_deny():
-    code = _code_only(_lua("NexusLua$Perm$Ask.smali"))
-    # BUTTON_POSITIVE -1 -> allow once (remember stays 0)
-    assert "const/4 v1, -0x1" in code
-    assert "const/4 v1, -0x3" in code
-    # BUTTON_NEGATIVE is "the rest": volatilize nothing, decision 2
-    assert "const/4 v1, 0x2" in code
-    assert code.count("iput-byte v0,") == 2, "positive and neutral both allow"
-    assert code.count("iput-boolean v0,") == 1, "only neutral remembers"
-    assert "countDown()V" in code, "every click releases the script thread"
+    raw = _lua("NexusLua$Perm$Ask.smali")
+    start = raw.index(".method public onClick(")
+    onclick = _code_only(raw[start:raw.index(".end method", start)])
+
+    assert "const/4 v0, -0x1" in onclick, "positive button is -1"
+    assert "const/4 v1, -0x3" in onclick, "neutral button is -3"
+    assert "if-eq p2, v0, :positive" in onclick
+    assert "if-eq p2, v1, :neutral" in onclick
+
+    pos = onclick.index("\n:positive")
+    neu = onclick.index("\n:neutral")
+    cnt = onclick.index("\n:count")
+
+    positive = onclick[pos:neu]
+    assert "const/4 v2, 0x1" in positive
+    assert "iput-byte v2" in positive
+    assert "const/4 v2, 0x0" in positive
+    assert "iput-boolean v2" in positive
+
+    neutral = onclick[neu:cnt]
+    assert "const/4 v2, 0x1" in neutral
+    assert "iput-byte v2" in neutral
+    assert "iput-boolean v2" in neutral
+
+    deny = onclick[:pos]
+    assert "const/4 v2, 0x2" in deny
+    assert "iput-byte v2" in deny
+
+    assert "countDown()V" in onclick, "every click releases the script thread"
 
 
 def test_dismissal_counts_down_too():

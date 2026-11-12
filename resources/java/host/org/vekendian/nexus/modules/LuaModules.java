@@ -19,7 +19,7 @@ import java.util.List;
  *
  * <p>{@code list} returns tab-separated records rather than ModuleInfo objects:
  * the Lua side is smali, and picking fields out of a value class there would be
- * both longer and easier to get wrong than splitting five strings.
+ * both longer and easier to get wrong than splitting nine strings.
  */
 final class LuaModules {
 
@@ -32,26 +32,72 @@ final class LuaModules {
         for (int i = 0; i < records.length; i++) {
             ModuleInfo s = modules.get(i);
             records[i] = field(s.path()) + '\t' + field(s.name()) + '\t'
-                    + state(s.state()) + '\t' + s.version() + '\t'
-                    + (s.autostart() ? "true" : "false");
+                    + field(idOf(s.path())) + '\t' + state(s.state()) + '\t'
+                    + s.version() + '\t' + (s.autostart() ? "true" : "false")
+                    + '\t' + type(s.type()) + '\t' + field(s.description())
+                    + '\t' + field(s.message());
         }
         return records;
     }
 
     /** null on success, otherwise the reason for {@code nil, err}. */
     static Object install(Context context, NexusExecutor executor, String path) {
+        return install(context, executor, path, null, null, null, null);
+    }
+
+    /** Path install with optional custom metadata. */
+    static Object install(Context context, NexusExecutor executor, String path,
+                          String name, String description, String version,
+                          String type) {
         File file = new File(path);
         if (!file.isFile() || !file.canRead()) {
             return "cannot read " + path;
         }
+        int v;
         try {
-            String id = executor.add(context, Uri.fromFile(file));
+            v = parseVersion(version);
+        } catch (NumberFormatException e) {
+            return "version must be an integer";
+        }
+        try {
+            String id = executor.add(context, Uri.fromFile(file), name,
+                    description, v, type);
             return id == null
                     ? "module could not be imported (expected .lua, .jar or .dex)"
                     : null;
         } catch (Throwable t) {
             return ModuleLoader.describe(t);
         }
+    }
+
+    /** Direct-binary install: a Lua string holds arbitrary bytes. */
+    static Object installBytes(Context context, NexusExecutor executor,
+                               byte[] content, String name, String description,
+                               String version, String type) {
+        if (content == null || content.length == 0) {
+            return "empty module content";
+        }
+        int v;
+        try {
+            v = parseVersion(version);
+        } catch (NumberFormatException e) {
+            return "version must be an integer";
+        }
+        try {
+            String id = executor.addBytes(context, content, name, description,
+                    v, type);
+            return id == null ? "module could not be imported" : null;
+        } catch (Throwable t) {
+            return ModuleLoader.describe(t);
+        }
+    }
+
+    /** Empty metadata is version 0; anything else must parse, not silently zero. */
+    private static int parseVersion(String version) {
+        if (version == null || version.trim().length() == 0) {
+            return 0;
+        }
+        return Integer.parseInt(version.trim());
     }
 
     // --------------------------------------------------------- import ops ---
@@ -194,6 +240,24 @@ final class LuaModules {
             default:
                 return "idle";
         }
+    }
+
+    /** The module id a script passes to import(): the label without its suffix. */
+    private static String idOf(String path) {
+        if (path == null) {
+            return "";
+        }
+        int slash = path.lastIndexOf('/');
+        String label = slash >= 0 ? path.substring(slash + 1) : path;
+        if (label.endsWith(".lua") || label.endsWith(".jar")
+                || label.endsWith(".dex")) {
+            return label.substring(0, label.length() - 4);
+        }
+        return label;
+    }
+
+    private static String type(ModuleInfo.Type type) {
+        return type == null ? "lua" : type.name().toLowerCase();
     }
 
     /** Tabs and newlines would break the record format. */

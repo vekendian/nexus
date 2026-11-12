@@ -7,6 +7,12 @@
 .method public abstract add(Landroid/content/Context;Landroid/net/Uri;)Ljava/lang/String;
 .end method
 
+.method public abstract add(Landroid/content/Context;Landroid/net/Uri;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String;
+.end method
+
+.method public abstract addBytes(Landroid/content/Context;[BLjava/lang/String;Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String;
+.end method
+
 .method public abstract failure()Ljava/lang/String;
 .end method
 

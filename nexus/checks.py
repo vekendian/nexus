@@ -697,7 +697,7 @@ def postflight(tree: Path, ids: Ids, src: Path | None = None, profile=None) -> l
     else:
         _tjx = _tj.read_text(encoding="utf-8")
         for _what in ('@drawable/nexus_bg_float_badge',
-                      '@drawable/nexus_bg_button',
+                      '@drawable/nexus_bg_float_button',
                       '@string/nexus_str_float_time_jump',
                       '@string/nexus_str_float_time_jump_last'):
             if _what not in _tjx:

@@ -268,12 +268,25 @@ def test_a_module_must_be_a_valid_lua_or_jar():
 
 def test_a_rejected_import_leaves_no_card_or_file():
     entry = (JAVA / "dexexec/nexus/ModuleRegistry.java").read_text()
-    add = entry[entry.index("public String add(Context context, Uri uri)"):]
+    add = entry[entry.index("private String registerImported("):]
     add = add[:add.index("\n    @Override")]
     assert "if (err != null)" in add
     assert "releaseRecord(rec);" in add
     assert "store.delete(imported);" in add
     assert "return null;" in add
+
+
+def test_jar_invoke_does_not_lose_an_interrupt():
+    """Stopping a script interrupts its thread; a Java call that swallows the
+    interrupt leaves the script running after the method returns."""
+    reg = (JAVA / "dexexec/nexus/ModuleRegistry.java").read_text()
+    body = reg[reg.index("private String[] invokeJarMethod("):]
+    body = body[:body.index("\n    /** Unpacks tab-joined args")]
+    assert "Thread.currentThread().isInterrupted()" in body
+    assert 'return new String[]{"e", "interrupted"};' in body
+    assert "cause instanceof InterruptedException" in body
+    assert "Thread.currentThread().interrupt();" in body
+    assert "t instanceof InterruptedException" in body
 
 
 def test_module_runs_on_its_own_thread_and_stops_by_interrupt():
@@ -365,7 +378,8 @@ def test_the_read_paths_wait_for_the_async_restore():
     assert "RESTORE_WAIT_MS" in entry
     assert "lock.wait(left);" in entry
     for sig in ("public List<ModuleInfo> modules()",
-                "public String add(Context context, Uri uri)",
+                "public String add(Context context, Uri uri, String name",
+                "public String addBytes(Context context, byte[] content,",
                 "public ClassLoader loadLibrary(String moduleId)",
                 "public Object loadModule(String moduleId)",
                 "public String[] jarSpec(String moduleId)",
@@ -384,14 +398,17 @@ def test_importing_a_module_that_is_already_there_is_a_no_op():
     """install() is what a script calls when it cannot tell whether the module
     is present; it must not leave a second copy behind."""
     entry = (JAVA / "dexexec/nexus/ModuleRegistry.java").read_text()
-    add = entry[entry.index("public String add(Context context, Uri uri)"):]
+    add = entry[entry.index(
+        "public String add(Context context, Uri uri, String name"):]
     add = add[:add.index("\n    @Override")]
     assert "idOf(Name.storedName(store.displayNameOf(uri)))" in add
     assert "pathOfId(wanted)" in add
     assert "return present;" in add
     # A second import that overlapped the first drops its copy too.
-    assert "recordOfIdLocked(wanted)" in add
-    assert "store.delete(imported);" in add
+    reg = entry[entry.index("private String registerImported("):]
+    reg = reg[:reg.index("\n    @Override")]
+    assert "recordOfIdLocked(wanted)" in reg
+    assert "store.delete(imported);" in reg
 
 
 def test_an_unowned_file_is_reused_instead_of_numbered():
@@ -401,6 +418,37 @@ def test_an_unowned_file_is_reused_instead_of_numbered():
     copy = copy[:copy.index("\n    void delete(File f)")]
     assert "hasEntry(named.getAbsolutePath())" in copy
     assert "? uniquePath(dir, stored) : named" in copy
+
+
+def test_store_persists_custom_metadata_with_escaping():
+    """A custom name/description/version survives a restart, and a description
+    containing the separator does not corrupt the record."""
+    store = (JAVA / "dexexec/nexus/ModuleStore.java").read_text()
+    assert "String name;" in store
+    assert "String description;" in store
+    assert "int version;" in store
+    assert "escapeField(" in store and "unescapeField(" in store
+    assert '"%7C"' in store and '"%25"' in store
+    assert 'split("\\\\|", 6)' in store
+
+
+def test_restore_applies_persisted_metadata():
+    reg = (JAVA / "dexexec/nexus/ModuleRegistry.java").read_text()
+    restore = reg[reg.index("private void restore()"):]
+    restore = restore[:restore.index(
+        "// ------------------------------------------------------------- executor ---")]
+    assert "rec.name = entry.name;" in restore
+    assert "rec.description = entry.description;" in restore
+    assert "rec.version = entry.version;" in restore
+
+
+def test_executor_has_binary_install_and_metadata():
+    ex = (JAVA / "api/org/vekendian/nexus/api/NexusExecutor.java").read_text()
+    assert "String add(Context context, Uri uri, String name," in ex
+    assert "String addBytes(Context context, byte[] content, String name," in ex
+    reg = (JAVA / "dexexec/nexus/ModuleRegistry.java").read_text()
+    assert "public String addBytes(" in reg
+    assert "store.importBytes(" in reg
 
 
 def test_a_module_without_a_manifest_is_named_without_its_suffix():

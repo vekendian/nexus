@@ -29,14 +29,14 @@
     :cond_5
     const/16 v0, 0x2e
 
-    .line 119
+    .line 147
     invoke-virtual {p1, v0}, Ljava/lang/String;->indexOf(I)I
 
     move-result v0
 
     if-gtz v0, :cond_1f
 
-    .line 121
+    .line 149
     new-instance p0, Ljava/lang/StringBuilder;
 
     invoke-direct {p0}, Ljava/lang/StringBuilder;-><init>()V
@@ -56,7 +56,7 @@
     :cond_1f
     const/4 v1, 0x0
 
-    .line 123
+    .line 151
     invoke-virtual {p1, v1, v0}, Ljava/lang/String;->substring(II)Ljava/lang/String;
 
     move-result-object v0
@@ -364,7 +364,7 @@
 .method public static capabilities()[Ljava/lang/String;
     .registers 1
 
-    .line 148
+    .line 176
     sget-object v0, Lorg/vekendian/nexus/modules/PermRules;->CAPABILITIES:[Ljava/lang/String;
 
     invoke-virtual {v0}, [Ljava/lang/String;->clone()Ljava/lang/Object;
@@ -379,14 +379,14 @@
 .method public static clearRemembered()V
     .registers 1
 
-    .line 184
+    .line 212
     invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->app()Landroid/content/Context;
 
     move-result-object v0
 
     if-eqz v0, :cond_9
 
-    .line 186
+    .line 214
     invoke-static {v0}, Lorg/vekendian/nexus/modules/LuaPerms;->clearRemembered(Landroid/content/Context;)V
 
     :cond_9
@@ -396,14 +396,14 @@
 .method public static global(Ljava/lang/String;)Z
     .registers 2
 
-    .line 152
+    .line 180
     invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->app()Landroid/content/Context;
 
     move-result-object v0
 
     if-eqz v0, :cond_e
 
-    .line 153
+    .line 181
     invoke-static {v0, p0}, Lorg/vekendian/nexus/modules/LuaPerms;->global(Landroid/content/Context;Ljava/lang/String;)Z
 
     move-result p0
@@ -421,17 +421,105 @@
     return p0
 .end method
 
+.method public static installBytes([BLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+    .registers 12
+
+    .line 122
+    invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->app()Landroid/content/Context;
+
+    move-result-object v0
+
+    .line 123
+    invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->executor()Lorg/vekendian/nexus/api/NexusExecutor;
+
+    move-result-object v1
+
+    if-eqz v0, :cond_17
+
+    if-nez v1, :cond_d
+
+    goto :goto_17
+
+    :cond_d
+    move-object v2, p0
+
+    move-object v3, p1
+
+    move-object v4, p2
+
+    move-object v5, p3
+
+    move-object v6, p4
+
+    .line 127
+    invoke-static/range {v0 .. v6}, Lorg/vekendian/nexus/modules/LuaModules;->installBytes(Landroid/content/Context;Lorg/vekendian/nexus/api/NexusExecutor;[BLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+
+    move-result-object p0
+
+    return-object p0
+
+    :cond_17
+    :goto_17
+    const-string p0, "module system is not running"
+
+    return-object p0
+.end method
+
+.method public static installPath(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+    .registers 12
+
+    .line 109
+    invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->app()Landroid/content/Context;
+
+    move-result-object v0
+
+    .line 110
+    invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->executor()Lorg/vekendian/nexus/api/NexusExecutor;
+
+    move-result-object v1
+
+    if-eqz v0, :cond_17
+
+    if-nez v1, :cond_d
+
+    goto :goto_17
+
+    :cond_d
+    move-object v2, p0
+
+    move-object v3, p1
+
+    move-object v4, p2
+
+    move-object v5, p3
+
+    move-object v6, p4
+
+    .line 114
+    invoke-static/range {v0 .. v6}, Lorg/vekendian/nexus/modules/LuaModules;->install(Landroid/content/Context;Lorg/vekendian/nexus/api/NexusExecutor;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+
+    move-result-object p0
+
+    return-object p0
+
+    :cond_17
+    :goto_17
+    const-string p0, "module system is not running"
+
+    return-object p0
+.end method
+
 .method public static migrateBroadGrants()V
     .registers 1
 
-    .line 177
+    .line 205
     invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->app()Landroid/content/Context;
 
     move-result-object v0
 
     if-eqz v0, :cond_9
 
-    .line 179
+    .line 207
     invoke-static {v0}, Lorg/vekendian/nexus/modules/LuaPerms;->migrateBroadGrants(Landroid/content/Context;)V
 
     :cond_9
@@ -441,7 +529,7 @@
 .method public static permMessage(ILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
     .registers 7
 
-    .line 196
+    .line 224
     invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->app()Landroid/content/Context;
 
     move-result-object v0
@@ -450,7 +538,7 @@
 
     return-object p2
 
-    .line 200
+    .line 228
     :cond_7
     new-instance v1, Ljava/io/File;
 
@@ -472,7 +560,7 @@
 
     move-result-object v1
 
-    .line 201
+    .line 229
     invoke-virtual {v1}, Ljava/lang/String;->length()I
 
     move-result v3
@@ -486,7 +574,7 @@
     :cond_20
     move-object v1, p1
 
-    .line 204
+    .line 232
     :cond_21
     invoke-virtual {v0, p0}, Landroid/content/Context;->getString(I)Ljava/lang/String;
 
@@ -514,7 +602,7 @@
 .method public static policy(Ljava/lang/String;Ljava/lang/String;)I
     .registers 3
 
-    .line 130
+    .line 158
     invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->app()Landroid/content/Context;
 
     move-result-object v0
@@ -525,7 +613,7 @@
 
     return p0
 
-    .line 134
+    .line 162
     :cond_8
     invoke-static {v0, p0, p1}, Lorg/vekendian/nexus/modules/LuaPerms;->allowed(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;)Z
 
@@ -537,7 +625,7 @@
 .method public static ready()Z
     .registers 1
 
-    .line 105
+    .line 133
     invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->app()Landroid/content/Context;
 
     move-result-object v0
@@ -564,14 +652,14 @@
 .method public static remember(Ljava/lang/String;Ljava/lang/String;)V
     .registers 3
 
-    .line 140
+    .line 168
     invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->app()Landroid/content/Context;
 
     move-result-object v0
 
     if-eqz v0, :cond_9
 
-    .line 142
+    .line 170
     invoke-static {v0, p0, p1}, Lorg/vekendian/nexus/modules/LuaPerms;->remember(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;)V
 
     :cond_9
@@ -581,14 +669,14 @@
 .method public static scriptOverride(Ljava/lang/String;)Z
     .registers 2
 
-    .line 171
+    .line 199
     invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->app()Landroid/content/Context;
 
     move-result-object v0
 
     if-eqz v0, :cond_e
 
-    .line 172
+    .line 200
     invoke-static {v0, p0}, Lorg/vekendian/nexus/modules/LuaPerms;->anyScriptOverride(Landroid/content/Context;Ljava/lang/String;)Z
 
     move-result p0
@@ -609,14 +697,14 @@
 .method public static setGlobal(Ljava/lang/String;Z)V
     .registers 3
 
-    .line 157
+    .line 185
     invoke-static {}, Lorg/vekendian/nexus/modules/NexusHost;->app()Landroid/content/Context;
 
     move-result-object v0
 
     if-eqz v0, :cond_9
 
-    .line 159
+    .line 187
     invoke-static {v0, p0, p1}, Lorg/vekendian/nexus/modules/LuaPerms;->setGlobal(Landroid/content/Context;Ljava/lang/String;Z)V
 
     :cond_9

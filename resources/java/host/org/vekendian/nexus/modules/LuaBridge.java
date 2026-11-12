@@ -100,6 +100,34 @@ public final class LuaBridge {
 
     // ------------------------------------------------------ Lua entry points ---
 
+    /**
+     * Path install, with the table's metadata fields. The Lua side passes empty
+     * strings for fields it did not get, so null/empty means "no override".
+     */
+    public static Object installPath(String path, String name, String description,
+                                     String version, String type) {
+        Context context = NexusHost.app();
+        NexusExecutor executor = NexusHost.executor();
+        if (context == null || executor == null) {
+            return ERROR_NOT_RUNNING;
+        }
+        return LuaModules.install(context, executor, path, name, description,
+                version, type);
+    }
+
+    /** Direct-binary install from a Lua string's bytes. */
+    public static Object installBytes(byte[] content, String name,
+                                      String description, String version,
+                                      String type) {
+        Context context = NexusHost.app();
+        NexusExecutor executor = NexusHost.executor();
+        if (context == null || executor == null) {
+            return ERROR_NOT_RUNNING;
+        }
+        return LuaModules.installBytes(context, executor, content, name,
+                description, version, type);
+    }
+
     /** True once the executor is loaded; checked before any prompt or dispatch. */
     public static boolean ready() {
         return NexusHost.app() != null && NexusHost.executor() != null;

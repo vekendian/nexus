@@ -34,6 +34,28 @@ public interface NexusExecutor {
     String add(Context context, Uri uri);
 
     /**
+     * Same as {@link #add(Context, Uri)}, with metadata the user supplied.
+     * A non-empty name overrides the manifest/file name; a positive version
+     * overrides the manifest version. The type argument is ignored: a path
+     * install always decides its type from the file extension.
+     *
+     * @return the module id (its path), or null when the import was rejected.
+     */
+    String add(Context context, Uri uri, String name, String description,
+               int version, String type);
+
+    /**
+     * Imports raw module bytes (a Lua string from the script) into clean
+     * storage and registers it. The stored name is the sanitised {@code name}
+     * plus the extension of {@code type}; a null or empty name stores
+     * {@code module.<ext>}.
+     *
+     * @return the module id (its path), or null when the content was rejected.
+     */
+    String addBytes(Context context, byte[] content, String name,
+                    String description, int version, String type);
+
+    /**
      * Stops the module if running, deletes its file, unregisters it, and
      * releases the persistable URI grant.
      *

@@ -112,112 +112,103 @@
     .line 162
     invoke-virtual {v0, v1, v3, v4, v5}, Landroid/widget/LinearLayout;->setPadding(IIII)V
 
-    const/16 v1, 0x8
+    .line 165
+    new-instance v1, Landroid/view/View;
 
-    .line 164
-    invoke-static {p0, v1}, Lorg/vekendian/nexus/modules/NexusToast;->dp(Landroid/content/Context;I)I
-
-    move-result v3
-
-    int-to-float v3, v3
-
-    invoke-virtual {v0, v3}, Landroid/widget/LinearLayout;->setElevation(F)V
+    invoke-direct {v1, p0}, Landroid/view/View;-><init>(Landroid/content/Context;)V
 
     .line 166
-    new-instance v3, Landroid/view/View;
+    new-instance v3, Landroid/graphics/drawable/GradientDrawable;
 
-    invoke-direct {v3, p0}, Landroid/view/View;-><init>(Landroid/content/Context;)V
+    invoke-direct {v3}, Landroid/graphics/drawable/GradientDrawable;-><init>()V
+
+    const/4 v4, 0x1
 
     .line 167
-    new-instance v4, Landroid/graphics/drawable/GradientDrawable;
-
-    invoke-direct {v4}, Landroid/graphics/drawable/GradientDrawable;-><init>()V
-
-    const/4 v5, 0x1
+    invoke-virtual {v3, v4}, Landroid/graphics/drawable/GradientDrawable;->setShape(I)V
 
     .line 168
-    invoke-virtual {v4, v5}, Landroid/graphics/drawable/GradientDrawable;->setShape(I)V
-
-    .line 169
     invoke-static {p0, p2}, Lorg/vekendian/nexus/modules/NexusToast;->dotColor(Landroid/content/Context;I)I
 
     move-result p2
 
-    invoke-virtual {v4, p2}, Landroid/graphics/drawable/GradientDrawable;->setColor(I)V
+    invoke-virtual {v3, p2}, Landroid/graphics/drawable/GradientDrawable;->setColor(I)V
+
+    .line 169
+    invoke-virtual {v1, v3}, Landroid/view/View;->setBackground(Landroid/graphics/drawable/Drawable;)V
 
     .line 170
-    invoke-virtual {v3, v4}, Landroid/view/View;->setBackground(Landroid/graphics/drawable/Drawable;)V
-
-    .line 171
     new-instance p2, Landroid/widget/LinearLayout$LayoutParams;
 
-    .line 172
-    invoke-static {p0, v1}, Lorg/vekendian/nexus/modules/NexusToast;->dp(Landroid/content/Context;I)I
+    const/16 v3, 0x8
+
+    .line 171
+    invoke-static {p0, v3}, Lorg/vekendian/nexus/modules/NexusToast;->dp(Landroid/content/Context;I)I
 
     move-result v4
 
-    invoke-static {p0, v1}, Lorg/vekendian/nexus/modules/NexusToast;->dp(Landroid/content/Context;I)I
+    invoke-static {p0, v3}, Lorg/vekendian/nexus/modules/NexusToast;->dp(Landroid/content/Context;I)I
 
-    move-result v1
+    move-result v3
 
-    invoke-direct {p2, v4, v1}, Landroid/widget/LinearLayout$LayoutParams;-><init>(II)V
+    invoke-direct {p2, v4, v3}, Landroid/widget/LinearLayout$LayoutParams;-><init>(II)V
 
-    .line 173
+    .line 172
     invoke-static {p0, v2}, Lorg/vekendian/nexus/modules/NexusToast;->dp(Landroid/content/Context;I)I
 
-    move-result v1
+    move-result v2
 
-    iput v1, p2, Landroid/widget/LinearLayout$LayoutParams;->rightMargin:I
+    iput v2, p2, Landroid/widget/LinearLayout$LayoutParams;->rightMargin:I
 
-    .line 174
-    invoke-virtual {v0, v3, p2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V
+    .line 173
+    invoke-virtual {v0, v1, p2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V
 
-    .line 176
+    .line 175
     new-instance p2, Landroid/widget/TextView;
 
     invoke-direct {p2, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V
 
-    .line 177
+    .line 176
     invoke-virtual {p2, p1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 
     const-string p1, "nexus_text"
 
     const-string v1, "color"
 
-    .line 178
+    .line 177
     invoke-static {p0, p1, v1}, Lorg/vekendian/nexus/modules/NexusHost;->resourceId(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;)I
 
     move-result p1
 
-    if-eqz p1, :cond_7f
+    if-eqz p1, :cond_77
 
-    .line 180
+    .line 179
     invoke-virtual {p2, p1}, Landroid/widget/TextView;->setTextColor(I)V
 
-    :cond_7f
+    :cond_77
     const/high16 p1, 0x41600000    # 14.0f
 
-    .line 182
+    .line 181
     invoke-virtual {p2, p1}, Landroid/widget/TextView;->setTextSize(F)V
 
     const/16 p1, 0x118
 
-    .line 183
+    .line 182
     invoke-static {p0, p1}, Lorg/vekendian/nexus/modules/NexusToast;->dp(Landroid/content/Context;I)I
 
     move-result p1
 
     invoke-virtual {p2, p1}, Landroid/widget/TextView;->setMaxWidth(I)V
 
-    .line 184
+    .line 183
     invoke-virtual {v0, p2}, Landroid/widget/LinearLayout;->addView(Landroid/view/View;)V
 
-    .line 186
+    .line 185
     new-instance p1, Landroid/widget/FrameLayout;
 
     invoke-direct {p1, p0}, Landroid/widget/FrameLayout;-><init>(Landroid/content/Context;)V
 
-    .line 187
+    .line 186
     invoke-virtual {p1, v0}, Landroid/widget/FrameLayout;->addView(Landroid/view/View;)V
 
     return-object p1
@@ -321,14 +312,14 @@
     :goto_e
     const-string v3, "color"
 
-    .line 200
+    .line 199
     invoke-static {p0, v2, v3}, Lorg/vekendian/nexus/modules/NexusHost;->resourceId(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;)I
 
     move-result v2
 
     if-eqz v2, :cond_20
 
-    .line 203
+    .line 202
     :try_start_16
     invoke-virtual {p0}, Landroid/content/Context;->getResources()Landroid/content/res/Resources;
 
@@ -371,7 +362,7 @@
 
     int-to-float p1, p1
 
-    .line 219
+    .line 218
     invoke-virtual {p0}, Landroid/content/Context;->getResources()Landroid/content/res/Resources;
 
     move-result-object p0
@@ -409,7 +400,7 @@
 .method private static overlayType()I
     .registers 2
 
-    .line 212
+    .line 211
     sget v0, Landroid/os/Build$VERSION;->SDK_INT:I
 
     const/16 v1, 0x1a

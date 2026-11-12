@@ -176,41 +176,50 @@
 # BUTTON_NEGATIVE (-2); the verdict is written before countDown, so the script
 # thread always sees it (latch establishes the happens-before).
 #
-# .locals 3 -> v0 ALLOW, v1 button/decision scratch.
+# Positive is Allow once (decision 1, remember 0), neutral is Always allow
+# (decision 1, remember 1), everything else -- negative or an unexpected value
+# -- is deny (decision 2). The earlier code compared the other way round, so
+# Deny landed on the allow-once path and Allow once persisted the grant.
+#
+# .locals 3 -> v0 positive button, v1 neutral button, v2 decision.
 
 
 .method public onClick(Landroid/content/DialogInterface;I)V
     .locals 3
 
-    const/4 v0, 0x1
+    const/4 v0, -0x1
 
-    const/4 v1, -0x1
+    const/4 v1, -0x3
+
+    const/4 v2, 0x2
+
+    if-eq p2, v0, :positive
 
     if-eq p2, v1, :neutral
 
-    iput-byte v0, p0, Lorg/vekendian/nexus/lua/NexusLua$Perm$Ask;->decision:B
+    iput-byte v2, p0, Lorg/vekendian/nexus/lua/NexusLua$Perm$Ask;->decision:B
 
-    const/4 v1, 0x0
+    goto :count
 
-    iput-boolean v1, p0, Lorg/vekendian/nexus/lua/NexusLua$Perm$Ask;->remember:Z
+    :positive
+    const/4 v2, 0x1
+
+    iput-byte v2, p0, Lorg/vekendian/nexus/lua/NexusLua$Perm$Ask;->decision:B
+
+    const/4 v2, 0x0
+
+    iput-boolean v2, p0, Lorg/vekendian/nexus/lua/NexusLua$Perm$Ask;->remember:Z
 
     goto :count
 
     :neutral
-    const/4 v1, -0x3
+    const/4 v2, 0x1
 
-    if-eq p2, v1, :negative
+    iput-byte v2, p0, Lorg/vekendian/nexus/lua/NexusLua$Perm$Ask;->decision:B
 
-    iput-byte v0, p0, Lorg/vekendian/nexus/lua/NexusLua$Perm$Ask;->decision:B
+    const/4 v2, 0x1
 
-    iput-boolean v0, p0, Lorg/vekendian/nexus/lua/NexusLua$Perm$Ask;->remember:Z
-
-    goto :count
-
-    :negative
-    const/4 v1, 0x2
-
-    iput-byte v1, p0, Lorg/vekendian/nexus/lua/NexusLua$Perm$Ask;->decision:B
+    iput-boolean v2, p0, Lorg/vekendian/nexus/lua/NexusLua$Perm$Ask;->remember:Z
 
     :count
     iget-object v0, p0, Lorg/vekendian/nexus/lua/NexusLua$Perm$Ask;->latch:Ljava/util/concurrent/CountDownLatch;

@@ -265,7 +265,7 @@ def test_time_jump_nexus_chrome(sample):
     out = transform_time_jump(sample)
     assert 'android:background="@drawable/txt_bg"' not in out
     assert 'android:background="@drawable/nexus_bg_float_badge"' in out
-    assert 'android:background="@drawable/nexus_bg_button"' in out
+    assert 'android:background="@drawable/nexus_bg_float_button"' in out
     assert 'android:textColor="@color/nexus_text"' in out
     assert 'android:contentDescription="@string/nexus_str_float_time_jump"' in out
     assert ('android:contentDescription="@string/nexus_str_float_time_jump_last"'
@@ -360,6 +360,30 @@ def test_real_gg_tree_layouts():
     out = transform_time_jump(jump.read_text(encoding="utf-8"))
     assert '@drawable/nexus_bg_float_badge' in out
     assert '@drawable/txt_bg' not in out
+
+
+def test_flat_ui_has_no_gradients():
+    for p in (RES_DIR / "res/drawable").glob("*.xml"):
+        assert "<gradient" not in p.read_text(encoding="utf-8"), p.name
+
+
+def test_flat_ui_has_no_elevation():
+    for p in (RES_DIR / "java/host").rglob("*.java"):
+        assert ".setElevation(" not in p.read_text(encoding="utf-8"), p.name
+
+
+def test_power_card_has_no_glow_view():
+    from nexus.layout import render
+    out = render("1.0.0")
+    assert "nexus_power_glow" not in out
+    assert "@drawable/nexus_bg_glow" not in out
+
+
+def test_float_surfaces_carry_hairlines():
+    for name in ("nexus_bg_ring_off.xml", "nexus_bg_ring_on.xml",
+                 "nexus_bg_float_readout.xml"):
+        text = (RES_DIR / "res/drawable" / name).read_text(encoding="utf-8")
+        assert '<stroke android:width="1dp"' in text, name
 
 
 def test_float_resources_exist():

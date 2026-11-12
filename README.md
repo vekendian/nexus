@@ -139,6 +139,7 @@ nexus/
   tree.py             resolve_tree, output clone, read/write
 profiles/             one JSON per GG release; gg-101.4.json is the current one
 nexus_ids.json        pinned IDs + observed GG bindings
+docs/NEXUS-API-DOCS.md  the nexus.* Lua API reference
 resources/res/        static drawables, values, icons
 tests/                pytest suite + fixtures
   make_fixture.py     regenerates the mini r.smali fixture from live anchors

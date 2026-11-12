@@ -26,9 +26,10 @@ import java.util.List;
  * {@code files/modules/<sanitised>.lua|.jar|.dex} and only the copy is ever remembered.
  *
  * <p>State lives in one SharedPreferences file, {@code nexus_modules}, key
- * {@code entries}: newline-separated records in format "path|type|dependsOnCsv".
- * Deliberately not GameGuardian's own prefs file, whose loader is not built to
- * tolerate foreign keys.
+ * {@code entries}: newline-separated records in format
+ * "path|type|dependsOnCsv|name|description|version", with name and description
+ * percent-escaped for the separators. Deliberately not GameGuardian's own prefs
+ * file, whose loader is not built to tolerate foreign keys.
  *
  * <p>Backward compatibility: old format (newline-separated paths) is still read,
  * but new entries are written in the new format.
@@ -48,16 +49,27 @@ final class ModuleStore {
         this.api = api;
     }
 
-    /** One persisted module entry with path, type, and dependencies. */
+    /** One persisted module entry with path, type, dependencies and metadata. */
     static final class Entry {
         final String path;
         final ModuleType type;
         final String[] dependsOn;
+        final String name;
+        final String description;
+        final int version;
 
-        Entry(String path, ModuleType type, String[] dependsOn) {
+        Entry(String path, ModuleType type, String[] dependsOn,
+              String name, String description, int version) {
             this.path = path;
             this.type = type != null ? type : ModuleType.LUA;
             this.dependsOn = dependsOn != null ? dependsOn : new String[0];
+            this.name = name == null ? "" : name;
+            this.description = description == null ? "" : description;
+            this.version = version;
+        }
+
+        Entry(String path, ModuleType type, String[] dependsOn) {
+            this(path, type, dependsOn, "", "", 0);
         }
     }
 
@@ -91,7 +103,7 @@ final class ModuleStore {
         for (int i = 0; i < parts.length; i++) {
             String line = parts[i].trim();
             if (line.length() == 0) continue;
-            String[] fields = line.split("\\|", 3);
+            String[] fields = line.split("\\|", 6);
             String path = fields[0];
             if (path.length() == 0 || !new File(path).isFile()) {
                 continue; // drop missing files
@@ -108,7 +120,23 @@ final class ModuleStore {
             if (fields.length > 2 && fields[2].length() > 0) {
                 dependsOn = fields[2].split(",");
             }
-            out.add(new Entry(path, type, dependsOn));
+            String name = "";
+            String description = "";
+            int version = 0;
+            if (fields.length > 3) {
+                name = unescapeField(fields[3]);
+            }
+            if (fields.length > 4) {
+                description = unescapeField(fields[4]);
+            }
+            if (fields.length > 5) {
+                try {
+                    version = Integer.parseInt(fields[5].trim());
+                } catch (NumberFormatException e) {
+                    version = 0;
+                }
+            }
+            out.add(new Entry(path, type, dependsOn, name, description, version));
         }
         return out;
     }
@@ -136,12 +164,47 @@ final class ModuleStore {
                     sb.append(e.dependsOn[j]);
                 }
             }
+            sb.append('|').append(escapeField(e.name));
+            sb.append('|').append(escapeField(e.description));
+            sb.append('|').append(e.version);
         }
         prefs().edit().putString(KEY_ENTRIES, sb.toString()).commit();
     }
 
+    /**
+     * Escapes a metadata field so the record separator cannot appear inside it.
+     *
+     * <p>The entry format is newline-separated records with pipe-separated
+     * fields, so a description containing a pipe or a newline would split the
+     * record. Percent-escaping is enough: no user text is ever interpreted.
+     */
+    private static String escapeField(String value) {
+        if (value == null) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == '%') out.append("%25");
+            else if (c == '|') out.append("%7C");
+            else if (c == '\n') out.append("%0A");
+            else if (c == '\r') out.append("%0D");
+            else out.append(c);
+        }
+        return out.toString();
+    }
+
+    private static String unescapeField(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("%7C", "|").replace("%0A", "\n")
+                .replace("%0D", "\r").replace("%25", "%");
+    }
+
     /** Adds one entry without overwriting a concurrent migration/import. */
-    synchronized void addEntry(String path, ModuleType type, String[] dependsOn) {
+    synchronized void addEntry(String path, ModuleType type, String[] dependsOn,
+                               String name, String description, int version) {
         List<Entry> entries = entries();
         // Remove existing entry with same path
         for (int i = 0; i < entries.size(); i++) {
@@ -150,8 +213,12 @@ final class ModuleStore {
                 break;
             }
         }
-        entries.add(new Entry(path, type, dependsOn));
+        entries.add(new Entry(path, type, dependsOn, name, description, version));
         saveEntries(entries);
+    }
+
+    synchronized void addEntry(String path, ModuleType type, String[] dependsOn) {
+        addEntry(path, type, dependsOn, "", "", 0);
     }
 
     /** Removes one entry without rewriting records the caller does not own. */
@@ -215,6 +282,56 @@ final class ModuleStore {
             // Not every provider grants (or releases) a persistable permission.
             Log.e(TAG, "persistable grant release failed: " + t);
         }
+    }
+
+    /**
+     * Writes raw module bytes into the modules directory and returns the file.
+     *
+     * <p>Same clean-path rule as {@link #importUri}: the caller gets a file in
+     * app-private storage, never a temporary. The stored name is the sanitised
+     * label plus the type's extension, because type detection keys on it.
+     *
+     * @return the stored file, or null when nothing could be written.
+     */
+    synchronized File importBytes(byte[] content, String name, ModuleType type) {
+        if (content == null || content.length == 0) {
+            return null;
+        }
+        String ext = type == ModuleType.JAR ? ".jar"
+                : type == ModuleType.DEX ? ".dex" : ".lua";
+        File dir = dir();
+        if (!dir.isDirectory() && !dir.mkdirs()) {
+            return null;
+        }
+        String base = Name.sanitise(name);
+        String stored = base + ext;
+        File named = new File(dir, stored);
+        File target = hasEntry(named.getAbsolutePath())
+                ? uniquePath(dir, stored) : named;
+        File tmp = new File(dir, target.getName() + ".part");
+        FileOutputStream out = null;
+        try {
+            out = new FileOutputStream(tmp);
+            out.write(content);
+            out.flush();
+            out.getFD().sync();
+        } catch (Throwable t) {
+            Log.e(TAG, "byte import failed: " + t);
+            closeQuietly(out);
+            delete(tmp);
+            return null;
+        }
+        closeQuietly(out);
+        if (tmp.length() == 0L) {
+            delete(tmp);
+            return null;
+        }
+        delete(target);
+        if (!tmp.renameTo(target)) {
+            delete(tmp);
+            return null;
+        }
+        return target;
     }
 
     private File copyUri(Uri uri) {

@@ -120,7 +120,21 @@ public final class ModuleRegistry implements NexusExecutor {
                 ModuleRecord rec = new ModuleRecord(entry.path);
                 rec.type = entry.type;
                 rec.dependsOn = entry.dependsOn;
+                rec.name = entry.name;
+                rec.description = entry.description;
+                rec.version = entry.version;
                 String err = prepareModule(context, rec, getSharedLibraryLoaderLocked());
+                // The persisted metadata is the user's, so it wins over anything
+                // a manifest discovered while the record was being prepared.
+                if (entry.name.length() > 0) {
+                    rec.name = entry.name;
+                }
+                if (entry.description.length() > 0) {
+                    rec.description = entry.description;
+                }
+                if (entry.version > 0) {
+                    rec.version = entry.version;
+                }
                 if (err == null) {
                     fresh.add(rec);
                 } else {
@@ -223,6 +237,12 @@ public final class ModuleRegistry implements NexusExecutor {
 
     @Override
     public String add(Context context, Uri uri) {
+        return add(context, uri, null, null, 0, null);
+    }
+
+    @Override
+    public String add(Context context, Uri uri, String name, String description,
+                      int version, String type) {
         if (uri == null || context == null) {
             return null;
         }
@@ -249,14 +269,63 @@ public final class ModuleRegistry implements NexusExecutor {
             Log.e(TAG, "import rejected: " + uri);
             return null;
         }
+        return registerImported(context, imported, uri, name, description,
+                version, wanted);
+    }
+
+    @Override
+    public String addBytes(Context context, byte[] content, String name,
+                           String description, int version, String type) {
+        if (context == null || api == null || content == null
+                || content.length == 0) {
+            return null;
+        }
+        awaitRestore();
+        if (store == null) {
+            store = new ModuleStore(context, api);
+        }
+        ModuleType mt;
+        try {
+            mt = type == null || type.length() == 0
+                    ? ModuleType.valueOf(typeFromName(name))
+                    : ModuleType.valueOf(type.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        String wanted = idOf(Name.sanitise(name) + extOf(mt));
+        String present = pathOfId(wanted);
+        if (present != null) {
+            Log.e(TAG, "import skipped, already installed: " + present);
+            return present;
+        }
+        File imported = store.importBytes(content, name, mt);
+        if (imported == null) {
+            Log.e(TAG, "byte import rejected");
+            return null;
+        }
+        return registerImported(context, imported, null, name, description,
+                version, wanted);
+    }
+
+    /**
+     * The tail both installs share: type detection, preparation, the user's
+     * metadata, publishing the record and autostart.
+     *
+     * <p>{@code uri} is null for a byte install, in which case there is no
+     * persistable grant to release. A rejection leaves no card, no file and no
+     * grant behind.
+     */
+    private String registerImported(Context context, File imported, Uri uri,
+                                    String name, String description, int version,
+                                    String wanted) {
         ModuleRecord rec = new ModuleRecord(imported.getAbsolutePath());
         // Detect type by file extension
-        String name = imported.getName().toLowerCase();
-        if (name.endsWith(".jar")) {
+        String lower = imported.getName().toLowerCase();
+        if (lower.endsWith(".jar")) {
             rec.type = ModuleType.JAR;
-        } else if (name.endsWith(".lua")) {
+        } else if (lower.endsWith(".lua")) {
             rec.type = ModuleType.LUA;
-        } else if (name.endsWith(".dex")) {
+        } else if (lower.endsWith(".dex")) {
             rec.type = ModuleType.DEX;
         } else {
             // Unknown module type - reject
@@ -274,6 +343,16 @@ public final class ModuleRegistry implements NexusExecutor {
             store.release(uri);
             Log.e(TAG, "import rejected: " + rec.path + " (" + err + ")");
             return null;
+        }
+        // The user's metadata is the intent; a manifest is only a fallback.
+        if (name != null && name.trim().length() > 0) {
+            rec.name = name.trim();
+        }
+        if (description != null && description.length() > 0) {
+            rec.description = description;
+        }
+        if (version > 0) {
+            rec.version = version;
         }
         // If this is a JAR/DEX, we need to make its shared loader available to dependents
         if ((rec.type == ModuleType.JAR || rec.type == ModuleType.DEX)
@@ -298,7 +377,8 @@ public final class ModuleRegistry implements NexusExecutor {
             Log.e(TAG, "import raced, already installed: " + raced.path);
             return raced.path;
         }
-        store.addEntry(rec.path, rec.type, rec.dependsOn);
+        store.addEntry(rec.path, rec.type, rec.dependsOn, rec.name,
+                rec.description, rec.version);
         Log.e(TAG, "imported " + rec.path + " (type=" + rec.type + ")");
         // A freshly added autostart module starts now rather than waiting for the
         // next resume, which is what a user who just tapped "+" expects.
@@ -308,6 +388,24 @@ public final class ModuleRegistry implements NexusExecutor {
         // Re-check waiting modules that might depend on this new JAR
         recheckDependents();
         return rec.path;
+    }
+
+    private static String typeFromName(String name) {
+        if (name != null) {
+            String lower = name.toLowerCase();
+            if (lower.endsWith(".jar")) {
+                return "JAR";
+            }
+            if (lower.endsWith(".dex")) {
+                return "DEX";
+            }
+        }
+        return "LUA";
+    }
+
+    private static String extOf(ModuleType type) {
+        return type == ModuleType.JAR ? ".jar"
+                : type == ModuleType.DEX ? ".dex" : ".lua";
     }
 
     @Override
@@ -618,6 +716,12 @@ public final class ModuleRegistry implements NexusExecutor {
         if (rec.instance == null || rec.entry == null) {
             return new String[]{"e", "no entry instance"};
         }
+        // A script that was stopped has already interrupted this thread. Do not
+        // start new Java work after that: the method would run to completion
+        // with no caller left to receive its result.
+        if (Thread.currentThread().isInterrupted()) {
+            return new String[]{"e", "interrupted"};
+        }
         // Find the spec for this method
         String[] specs = buildJarSpec(rec);
         String pspec = null;
@@ -702,8 +806,18 @@ public final class ModuleRegistry implements NexusExecutor {
             return new String[]{"r", result == null ? "" : String.valueOf(result)};
         } catch (java.lang.reflect.InvocationTargetException e) {
             Throwable cause = e.getCause();
+            if (cause instanceof InterruptedException) {
+                // Re-set the flag the reflection call consumed, so the Lua
+                // thread stops after this call unwinds instead of continuing.
+                Thread.currentThread().interrupt();
+                return new String[]{"e", "interrupted"};
+            }
             return new String[]{"e", cause != null ? cause.getMessage() : e.getMessage()};
         } catch (Throwable t) {
+            if (t instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+                return new String[]{"e", "interrupted"};
+            }
             return new String[]{"e", describe(t)};
         }
     }

@@ -161,7 +161,6 @@ final class NexusToast {
         }
         pill.setPadding(dp(context, 16), dp(context, 12), dp(context, 20),
                 dp(context, 12));
-        pill.setElevation(dp(context, 8));
 
         View dot = new View(context);
         GradientDrawable shape = new GradientDrawable();
